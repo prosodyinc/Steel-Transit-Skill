@@ -36,6 +36,7 @@ public class Application {
      */
     public Application(@JsonProperty("applicationId") final String applicationId) {
         this.applicationId = applicationId;
+        //test push
     }
 
     /**
