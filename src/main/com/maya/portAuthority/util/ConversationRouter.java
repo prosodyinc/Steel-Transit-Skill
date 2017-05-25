@@ -21,6 +21,8 @@ public class ConversationRouter {
 		// DataHelper.LAST_QUESTION);
 
 		// Need Route, Location, and Direction
+		
+		// maybe replace with PaInput.hasAllData()
 		if (DataHelper.getValueFromSession(session, DataHelper.ROUTE_ID) == null) {
 			session.setAttribute(DataHelper.LAST_QUESTION, DataHelper.ROUTE_PROMPT);
 			return OutputHelper.newAskResponse(feedbackText + "," + DataHelper.ROUTE_PROMPT, DataHelper.ROUTE_PROMPT);

@@ -61,11 +61,15 @@ public class GetNextBusSpeechlet implements Speechlet {
 		BasicConfigurator.configure();
 		log.info("onLaunch requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		// TODO: Pull the Skill Context out of history, too.
+		//pulls up this users previous input
 		PaInput storedInput = this.getPaDao().getPaInput(session);
-
+		//instead of this, ^ initialize it in onSessionStarted
+		//PaInput storedInput = inputDao.getInput(session);
+		
+		//if the input exists and all of the data is present (bus stop, direction, route) 
 		if ((storedInput != null) && storedInput.hasAllData()) {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Return Saved");
-			skillContext.setNeedsLocation(false);
+			skillContext.setNeedsLocation(false); //we don't need to specify the closest bus stop to the location 
 			List<Message> predictions = getPredictions(storedInput.getData());
 			return buildResponse(storedInput.getData(), predictions);
 		} else {
@@ -86,7 +90,17 @@ public class GetNextBusSpeechlet implements Speechlet {
 		analytics = new AnalyticsManager();
 		analytics.setUserId(session.getUser().getUserId());
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
-
+		
+		/*if (inputDao == null){
+		 * createNewPaDao();
+		}
+		*/
+		
+		/* OR, if we want to let the database be an attribute of the session
+		 * if (session.getAttribute("DATABASE") == null){
+		 * 	createNewPaDao()
+		 * }
+		 */
 		skillContext = new SkillContext();
 	}
 
@@ -116,7 +130,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			case DataHelper.ALL_ROUTES_INTENT_NAME:
 				// try to retrieve current record for this user
 				PaInput input = getPaDao().getPaInput(session);
-
+				//should we setAllRoutes to true even if input doesn't have all the data it needs?
 				if ((input != null) && input.hasAllData()) { // if record found
 																// and the all
 																// necessary
@@ -139,17 +153,18 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 			case DataHelper.ONE_SHOT_INTENT_NAME:
 				// collect all the information provided by the user
-
-				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.ROUTE_ID)!=null){
-					feedbackText = DataHelper.putRouteValuesInSession(session, intent);
+				
+				skillContext.setAllRoutes(false);
+				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.ROUTE_ID)!=null){ //check to see if a route was said
+					feedbackText = DataHelper.putRouteValuesInSession(session, intent); //then put it into the session,  adding Route name and route ID to feedbackText
 				}
 
-				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.LOCATION)!=null){
-					feedbackText += DataHelper.putLocationValuesInSession(session, intent);
+				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.LOCATION)!=null){ //check to see if a location was said
+					feedbackText += DataHelper.putLocationValuesInSession(session, intent); //then put it into the session, adding the Location to the feedbackText
 				}
 
-				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.DIRECTION)!=null){
-					feedbackText += DataHelper.putDirectionValuesInSession(session, intent);
+				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.DIRECTION)!=null){ //check to see if a direction was said
+					feedbackText += DataHelper.putDirectionValuesInSession(session, intent); //then put it into the session, adding the direction to the feedbackText
 				}
 
 				break;
@@ -181,7 +196,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		// if we don't have everything we need to create predictions, continue
 		// the conversation
 		SpeechletResponse furtherQuestions;
-		if ((furtherQuestions = ConversationRouter.checkForAdditionalQuestions(session, feedbackText)) != null) {
+		if ((furtherQuestions = ConversationRouter.checkForAdditionalQuestions(session, feedbackText)) != null) { //if any of the 3 slots values have not been specified yet
 			return furtherQuestions;
 		} else if (log.isInfoEnabled()) {
 			logSession(session, "Returning response for:");
@@ -397,7 +412,13 @@ public class GetNextBusSpeechlet implements Speechlet {
 		}
 		return this.inputDao;
 	}
-
+	
+	/*
+	 * private void createNewPaDao(){
+	 * 		//stick all of the above initialization logic in here instead of having several different methods
+	 * 		//possibly add it to the attributes of the session
+	 * }
+	 */
 	private void saveInputToDB(PaInput input) {
 		getPaDao().savePaInput(input);
 
