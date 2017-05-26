@@ -27,6 +27,10 @@ import com.amazon.speech.speechlet.SpeechletResponse;
 import com.amazon.speech.ui.OutputSpeech;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.SsmlOutputSpeech;
+import com.amazon.util.ConversationRouter;
+import com.amazon.util.DataHelper;
+import com.amazon.util.OutputHelper;
+import com.amazon.util.SkillContext;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
@@ -89,6 +93,10 @@ public class GetNextBusSpeechlet implements Speechlet {
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
 
 		skillContext = new SkillContext();
+		
+		/* Adam addition */
+		createPaDao();
+		session.setAttribute("DATABASE", inputDao);
 	}
 
 	/**
@@ -122,8 +130,14 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 			case DataHelper.ALL_ROUTES_INTENT_NAME:
 				// try to retrieve current record for this user
-				PaInput input = getPaDao().getPaInput(session);
+				//PaInput input = getPaDao().getPaInput(session);
 
+				/*if (inputDao == null){
+					createPaDao();
+				}*/
+				
+				PaInput input = inputDao.getPaInput(session);
+				
 				if ((input != null) && input.hasAllData()) { // if record found
 																// and the all
 																// necessary
@@ -146,7 +160,8 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 			case DataHelper.ONE_SHOT_INTENT_NAME:
 				// collect all the information provided by the user
-
+				
+				skillContext.setAllRoutes(false);
 				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.ROUTE_ID)!=null){
 					feedbackText = DataHelper.putRouteValuesInSession(session, intent);
 				}
@@ -408,6 +423,12 @@ public class GetNextBusSpeechlet implements Speechlet {
 		return this.inputDao;
 	}
 
+	private void createPaDao() {
+		this.amazonDynamoDBClient = new AmazonDynamoDBClient();
+		this.dynamoDbClient = new PaDynamoDbClient(amazonDynamoDBClient);
+		this.inputDao = new PaDao(dynamoDbClient);
+	}
+	
 	private void saveInputToDB(PaInput input) {
 		getPaDao().savePaInput(input);
 

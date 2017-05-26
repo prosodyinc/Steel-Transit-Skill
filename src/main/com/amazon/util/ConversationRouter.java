@@ -1,4 +1,4 @@
-package co.prosody.portAuthority.util;
+package com.amazon.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.amazon.speech.slu.Intent;
 import com.amazon.speech.speechlet.Session;
 import com.amazon.speech.speechlet.SpeechletResponse;
+
 import co.prosody.portAuthority.InvalidInputException;
 
 

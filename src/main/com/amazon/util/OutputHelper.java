@@ -1,4 +1,4 @@
-package co.prosody.portAuthority.util;
+package com.amazon.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,11 +16,15 @@ import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import com.amazon.speech.ui.SsmlOutputSpeech;
 import com.amazon.speech.ui.StandardCard;
+
 import co.prosody.portAuthority.GetNextBusSpeechlet;
 import co.prosody.portAuthority.googleMaps.GoogleMaps;
 import co.prosody.portAuthority.googleMaps.Instructions;
 import co.prosody.portAuthority.googleMaps.NearestStopLocator;
 import co.prosody.portAuthority.storage.PaInputData;
+import co.prosody.portAuthority.util.Navigation;
+import co.prosody.portAuthority.util.Result;
+
 import org.json.JSONObject;
 
 

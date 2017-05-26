@@ -1,4 +1,4 @@
-package co.prosody.portAuthority.util;
+package com.amazon.util;
 
 /**
  * Contains session scoped settings.

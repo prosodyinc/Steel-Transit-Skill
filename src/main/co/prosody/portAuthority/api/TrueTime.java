@@ -14,8 +14,12 @@ import co.prosody.portAuthority.util.Stop;
  */
 public class TrueTime {
 	
-	public static List<Message> generatePredictions(String route, String stationID){
-		return TrueTimeAPI.getPredictions(stationID, stationID);
+	public static List<Message> generatePredictions(String route, String stationID ){
+		return TrueTimeAPI.getPredictions(route, stationID);
+	}
+	
+	public static List<Message> generatePredictions(String stationID, int maxValues){
+		return TrueTimeAPI.getPredictions(stationID, maxValues);
 	}
 	
 	public static List<Message> generatePredictions(String stationID){
