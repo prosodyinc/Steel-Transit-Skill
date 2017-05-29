@@ -93,16 +93,18 @@ public class GetNextBusSpeechlet implements Speechlet {
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
 
 		skillContext = new SkillContext();
-		
-		/* Adam addition */
-		createPaDao();
-		session.setAttribute("DATABASE", inputDao);
 	}
 
 	/**
 	 * Called when the user invokes an intent.
 	 */
 	public SpeechletResponse onIntent(IntentRequest request, Session session) throws SpeechletException {
+		if (analytics == null){
+			analytics = new AnalyticsManager();
+			analytics.setUserId(session.getUser().getUserId());
+			analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
+			skillContext = new SkillContext();
+		}
 		log.info("onIntent intent={}, requestId={}, sessionId={}", request.getIntent().getName(),
 				request.getRequestId(), session.getSessionId());
 		log.info("onIntent sessionValue={}", session.getAttributes().toString());
@@ -110,7 +112,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 		try {
 			Intent intent = request.getIntent();
 			analytics.postEvent(AnalyticsManager.CATEGORY_INTENT, intent.getName());
-
 			switch (intent.getName()) {
 			case "AMAZON.StopIntent":
 				return OutputHelper.getStopResponse();
@@ -120,6 +121,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 				return OutputHelper.getHelpResponse();
 
 			case DataHelper.RESET_INTENT_NAME:
+				
 				// Delete current record for this user
 				this.getPaDao().deletePaInput(session);
 
@@ -130,14 +132,8 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 			case DataHelper.ALL_ROUTES_INTENT_NAME:
 				// try to retrieve current record for this user
-				//PaInput input = getPaDao().getPaInput(session);
+				PaInput input = getPaDao().getPaInput(session);
 
-				/*if (inputDao == null){
-					createPaDao();
-				}*/
-				
-				PaInput input = inputDao.getPaInput(session);
-				
 				if ((input != null) && input.hasAllData()) { // if record found
 																// and the all
 																// necessary
@@ -263,18 +259,15 @@ public class GetNextBusSpeechlet implements Speechlet {
 		c.setLat(new Double(in.getLocationLat()).doubleValue());
 		c.setLng(new Double(in.getLocationLong()).doubleValue());
 
-		//return NearestStopLocator.process(c, in.getRouteID(), in.getDirection());
-		return GoogleMaps.findNearestStop(c, in.getRouteID(), in.getDirection());
+		return NearestStopLocator.process(c, in.getRouteID(), in.getDirection());
 	}
 
 	private List<Message> getPredictions(PaInputData inputData) {
 		List<Message> messages = new ArrayList<Message>();
 		if (skillContext.isAllRoutes()) {
-			//messages = TrueTimeAPI.getPredictions(inputData.getStopID());
-			messages = TrueTime.generatePredictions(inputData.getStopID());
+			messages = TrueTimeAPI.getPredictions(inputData.getStopID());
 		} else {
-			//messages = TrueTimeAPI.getPredictions(inputData.getRouteID(), inputData.getStopID());
-			messages = TrueTime.generatePredictions(inputData.getRouteID(), inputData.getStopID());
+			messages = TrueTimeAPI.getPredictions(inputData.getRouteID(), inputData.getStopID());
 		}
 		return messages;
 	}
@@ -423,12 +416,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 		return this.inputDao;
 	}
 
-	private void createPaDao() {
-		this.amazonDynamoDBClient = new AmazonDynamoDBClient();
-		this.dynamoDbClient = new PaDynamoDbClient(amazonDynamoDBClient);
-		this.inputDao = new PaDao(dynamoDbClient);
-	}
-	
 	private void saveInputToDB(PaInput input) {
 		getPaDao().savePaInput(input);
 

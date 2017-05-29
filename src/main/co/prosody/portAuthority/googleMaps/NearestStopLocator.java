@@ -49,7 +49,7 @@ public class NearestStopLocator {
      * @throws JSONException
      * @throws InvalidInputException
      */
-    protected static Stop process(Location source, String routeID, String direction) throws IOException, JSONException, InvalidInputException {
+    public static Stop process(Location source, String routeID, String direction) throws IOException, JSONException, InvalidInputException {
         log.trace("Process: source={}, routeId={}, direction={}", source, routeID, direction);
         if ((source == null) || (routeID == null) || (direction == null)) {
             log.error("Bad Input");
@@ -57,8 +57,8 @@ public class NearestStopLocator {
         }
 
         //Get list of stops of the route# returned by truetime:
-        //List<Stop> listOfStops = TrueTimeAPI.getStopsAsJson(routeID, direction);
-        List<Stop> listOfStops = TrueTime.getStopsAsJson(routeID, direction);
+        List<Stop> listOfStops = TrueTimeAPI.getStopsAsJson(routeID, direction);
+        //List<Stop> listOfStops = TrueTime.getStopsAsJson(routeID, direction);
         
         //find nearest stop from the source location:
         Stop nearestStop = findNearestStop(source.getLat(), source.getLng(), listOfStops);
@@ -67,7 +67,7 @@ public class NearestStopLocator {
 
     }
 
-    protected static Location getSourceLocation(String source) throws IOException, JSONException, InvalidInputException {
+    public static Location getSourceLocation(String source) throws IOException, JSONException, InvalidInputException {
         log.trace("getSourceLocation: source={}", source);
         List<Location> sourceLocation = getSourceLocationCoordinates(source, 1);
 
@@ -85,7 +85,7 @@ public class NearestStopLocator {
      * @throws IOException
      * @throws JSONException
      */
-    protected static List<Location> getSourceLocationCoordinates(String source, int numResults) throws IOException, JSONException, InvalidInputException {
+    public static List<Location> getSourceLocationCoordinates(String source, int numResults) throws IOException, JSONException, InvalidInputException {
         log.info("getSourceLocationCoordinates: source={}", source);
         JSONObject currentLocationDetails = null;
         List<Location> listOfLocationCoordinates = null;
@@ -98,7 +98,7 @@ public class NearestStopLocator {
         return listOfLocationCoordinates;
     }
 
-    protected static JSONObject getDirections(String locationLat, String locationLng, double stopLat, double stopLng) throws IOException, JSONException {
+    public static JSONObject getDirections(String locationLat, String locationLng, double stopLat, double stopLng) throws IOException, JSONException {
         return JsonUtils.readJsonFromUrl(String.format(DIRECTIONS_URL, locationLat, locationLng, stopLat, stopLng, GOOGLE_MAPS_KEY));
     }
 
@@ -132,7 +132,7 @@ public class NearestStopLocator {
      * @throws JSONException
      * @throws IOException
      */
-    protected static Stop findNearestStop(double sourceLat, double sourceLon, List<Stop> stops) throws JSONException, IOException {
+    public static Stop findNearestStop(double sourceLat, double sourceLon, List<Stop> stops) throws JSONException, IOException {
 		//TODO Improve efficiency of findNearestStop
 
 		//        "rows": [ {
@@ -187,7 +187,7 @@ public class NearestStopLocator {
         return nearestStops.get(0);
     }
 
-    protected static Stop calculateShortestDistance(String url, List<Stop> currentBatchStops) throws JSONException, IOException {
+    public static Stop calculateShortestDistance(String url, List<Stop> currentBatchStops) throws JSONException, IOException {
         //log.info("DISTANCE_MATRIX_URL:"+url);
         JSONArray distanceJSON = null;
         distanceJSON = JsonUtils.readJsonFromUrl(url)
@@ -229,7 +229,7 @@ public class NearestStopLocator {
      * *************************************Util
      * methods**********************************************
      */
-    protected static double convertMileToFeet(String distance) {
+    public static double convertMileToFeet(String distance) {
         log.info("convertMileToFeet: distance={}", distance);
 
         double result = 0.0;
@@ -243,7 +243,7 @@ public class NearestStopLocator {
         return result;
     }
 
-    protected static String buildImage(String locationLat, String locationLon, double stopLat, double stopLon) {
+    public static String buildImage(String locationLat, String locationLon, double stopLat, double stopLon) {
         String url = "https://maps.googleapis.com/maps/api/staticmap?size=1200x800&maptype=roadmap&key=" + STATIC_MAPS_KEY + "&format=png&visual_refresh=true&markers=size:mid%7Ccolor:0xff0000%7Clabel:1%7C" + locationLat + "," + locationLon + "&markers=size:mid%7Ccolor:0xff0000%7Clabel:2%7C" + stopLat + "," + stopLon + "&path=color:0x0000ff|weight:5|";
         log.info("buildImage url={}",url);
         return url;

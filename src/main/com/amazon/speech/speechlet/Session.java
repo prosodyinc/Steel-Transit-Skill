@@ -19,6 +19,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import co.prosody.portAuthority.storage.PaDao;
+import co.prosody.portAuthority.storage.PaInput;
+
 /**
  * <p>
  * A {@code Session} represents a single execution of a {@code Speechlet} by a user.
@@ -76,7 +79,7 @@ public final class Session {
     private final Application application;
     private final Map<String, Object> attributes;
     private final User user;
-
+  
     /**
      * Returns a new builder instance used to construct a new {@code Session}.
      *
@@ -206,6 +209,19 @@ public final class Session {
         attributes.put(name, value);
     }
 
+    public void updateData(final String field, final Object value) throws Exception{
+    	if (!attributes.containsKey("DATABASE")){
+    		throw new Exception();
+    	}
+    	PaDao inputDao = (PaDao)((attributes.get("DATABASE")));
+    	PaInput data = inputDao.getPaInput(this);
+    	switch (field){
+    	case("ROUTE"):
+    		//data.getData().s
+    	}
+    }
+    
+    
     /**
      * Remove the attribute associated with the provided name.
      *

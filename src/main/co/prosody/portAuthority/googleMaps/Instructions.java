@@ -40,7 +40,7 @@ public class Instructions {
 	 * @param jsonObject
 	 * @return The Direction retrieved by the JSON Object
 	 */
-	protected static List<Direction> parse(JSONObject jsonObject) throws Exception {
+	public static List<Direction> parse(JSONObject jsonObject) throws Exception {
 		List<Direction> directionsList = null; // returned direction
 		Direction currentGDirection = null; // current direction
 		List<Legs> legsList = null; // legs
@@ -123,7 +123,7 @@ public class Instructions {
 		return directionsList;
 	}
 
-	protected static String getInstructions(JSONObject obj) throws Exception {
+	public static String getInstructions(JSONObject obj) throws Exception {
 		List<Direction> listOfDirections = new ArrayList<>();
 		listOfDirections = parse(obj);
 		StringBuilder sb = new StringBuilder();
@@ -133,7 +133,7 @@ public class Instructions {
 		return sb.toString();
 	}
         
-	protected static String printWayPoints(JSONObject obj) throws Exception {
+	public static String printWayPoints(JSONObject obj) throws Exception {
 		List<Direction> listOfDirections = new ArrayList<>();
 		listOfDirections = parse(obj);
 		StringBuilder sb = new StringBuilder();
@@ -147,7 +147,7 @@ public class Instructions {
 	 * Method to decode polyline points Source:
 	 * http://jeffreysambells.com/2010/05/27/decoding-polylines-from-google-maps-direction-api-with-java
 	 */
-	protected static List<Point> decodePoly(String encoded) {
+	public static List<Point> decodePoly(String encoded) {
 
 		List<Point> poly = new ArrayList<Point>();
 		int index = 0, len = encoded.length();
@@ -179,7 +179,7 @@ public class Instructions {
 	}
 
 	// test
-	protected static void main(String[] args) throws Exception {
+	public static void main(String[] args) throws Exception {
 		String jsonData = "";
 		BufferedReader br = null;
 		try {

@@ -125,7 +125,7 @@ public class OutputHelper {
 	}
 	
 	public static SpeechletResponse getHelpResponse(){
-		String output=AUDIO_WELCOME+" "+HELP_SPEECH + ROUTE_PROMPT;
+		String output=AUDIO_WELCOME+" "+HELP_SPEECH + " " + ROUTE_PROMPT;
 		
 		return newAskResponse(output, ROUTE_PROMPT);
 	}
@@ -243,15 +243,15 @@ public class OutputHelper {
     private static Navigation buildNavigation(String locationLat, String locationLon, double stopLat, double stopLon) throws IOException, JSONException, Exception{	
     	Navigation navigation = new Navigation();
     	
-    	//JSONObject json = NearestStopLocator.getDirections(locationLat, locationLon, stopLat, stopLon);
-        //String instructions = Instructions.getInstructions(json);
+    	JSONObject json = NearestStopLocator.getDirections(locationLat, locationLon, stopLat, stopLon);
+        String instructions = Instructions.getInstructions(json);
         
-    	String instructions = GoogleMaps.generateInstructions(locationLat, locationLon, stopLat, stopLon);
+    	//String instructions = GoogleMaps.generateInstructions(locationLat, locationLon, stopLat, stopLon);
     	
         //Set image URL
-        //String image = NearestStopLocator.buildImage(locationLat, locationLon, stopLat, stopLon) + Instructions.printWayPoints(json);
+        String image = NearestStopLocator.buildImage(locationLat, locationLon, stopLat, stopLon) + Instructions.printWayPoints(json);
     	
-    	String image = GoogleMaps.generateImageURL(locationLat, locationLon, stopLat, stopLon);
+    	//String image = GoogleMaps.generateImageURL(locationLat, locationLon, stopLat, stopLon);
         image = image.substring(0, image.length() -1); //Remove the last '|'
         
         //Set image Name

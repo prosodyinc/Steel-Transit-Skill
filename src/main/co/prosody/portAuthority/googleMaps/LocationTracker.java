@@ -38,7 +38,7 @@ public class LocationTracker {
      * @return
      * @throws JSONException 
      */
-	protected static List<Location> getLatLngDetails(JSONObject json, int limit) throws JSONException, InvalidInputException {
+	public static List<Location> getLatLngDetails(JSONObject json, int limit) throws JSONException, InvalidInputException {
     	List<Location> output = new ArrayList<>();
     	
         JSONArray results = json.getJSONArray("results");
@@ -68,7 +68,7 @@ public class LocationTracker {
         return output;
     }
     
-    private static List<String> makeList(JSONArray array) throws JSONException{
+	public static List<String> makeList(JSONArray array) throws JSONException{
     	List<String>  output = new ArrayList<String>();
     	for (int i=0;i<array.length();i++){
     		output.add(array.getString(i));
@@ -76,7 +76,7 @@ public class LocationTracker {
     	return output;
     }
     
-    protected static List<Stop> getStopDetails(JSONObject json) throws JSONException {
+	public static List<Stop> getStopDetails(JSONObject json) throws JSONException {
     	List<Stop> stops = new ArrayList<>();
         JSONArray stopsResponse = json.getJSONObject("bustime-response").getJSONArray("stops");
 
