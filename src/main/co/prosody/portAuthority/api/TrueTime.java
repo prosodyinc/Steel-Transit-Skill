@@ -26,7 +26,7 @@ public class TrueTime {
 		return TrueTimeAPI.getPredictions(stationID);
 	}
 	
-	/* This now resides in GoogleMaps
+	/* This is now never directly called by the user
 	//similar to the GoogleMaps generateStops
 	protected static List<Stop> getStopsAsJson(String route, String direction) throws IOException, JSONException{
 		return TrueTimeAPI.getStopsAsJson(route, direction);

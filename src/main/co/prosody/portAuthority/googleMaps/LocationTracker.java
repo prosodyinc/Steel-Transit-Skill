@@ -79,9 +79,11 @@ public class LocationTracker {
     	return output;
     }
     
-	/** MOVED FROM TRUETIMEAPI
+	/* MOVED FROM TRUETIMEAPI
 	 * Note: this makes this method dependent on existence of TrueTimeAPI.
-	 * Someday if needed, the URL constants can be passed in as parameters to workaround this
+	 * Someday if needed, the URL constants can be passed in as parameters to workaround this*/
+	
+	/**
      * Gets list of stops for a route#
      * @param route
      * @param direction
@@ -99,8 +101,7 @@ public class LocationTracker {
        List<Stop> listOfStops = null;
        stopsJSON = JsonUtils.readJsonFromUrl(url);
        
-       //TODO: should this be here?
-       listOfStops = LocationTracker.getStopDetails(stopsJSON);
+       listOfStops = getStopDetails(stopsJSON);
        //listOfStops = GoogleMaps.generateStops(stopsJSON);
        
        return listOfStops;
