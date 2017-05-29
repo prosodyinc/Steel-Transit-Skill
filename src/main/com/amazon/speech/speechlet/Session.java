@@ -76,7 +76,7 @@ public final class Session {
     private final Application application;
     private final Map<String, Object> attributes;
     private final User user;
-
+  
     /**
      * Returns a new builder instance used to construct a new {@code Session}.
      *
@@ -205,7 +205,8 @@ public final class Session {
     public void setAttribute(final String name, final Object value) {
         attributes.put(name, value);
     }
-
+    
+    
     /**
      * Remove the attribute associated with the provided name.
      *
