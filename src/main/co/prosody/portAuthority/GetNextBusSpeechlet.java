@@ -66,7 +66,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		BasicConfigurator.configure();
 		log.info("onLaunch requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		// TODO: Pull the Skill Context out of history, too.
-		PaInput storedInput = this.getPaDao().getPaInput(session);
+		PaInput storedInput = this.getPaDao().getPaInput(session.getUser().getUserId());
 
 		if ((storedInput != null) && storedInput.hasAllData()) {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Return Saved");
@@ -87,7 +87,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 */
 	public void onSessionStarted(SessionStartedRequest request, Session session) throws SpeechletException {
 		log.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
-
+		
 		analytics = new AnalyticsManager();
 		analytics.setUserId(session.getUser().getUserId());
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
@@ -123,7 +123,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			case DataHelper.RESET_INTENT_NAME:
 				
 				// Delete current record for this user
-				this.getPaDao().deletePaInput(session);
+				this.getPaDao().deletePaInput(session.getUser().getUserId());
 
 				// Notify the user of success
 				PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
@@ -132,7 +132,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 			case DataHelper.ALL_ROUTES_INTENT_NAME:
 				// try to retrieve current record for this user
-				PaInput input = getPaDao().getPaInput(session);
+				PaInput input = getPaDao().getPaInput(session.getUser().getUserId());
 
 				if ((input != null) && input.hasAllData()) { // if record found
 																// and the all
@@ -210,6 +210,9 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 		// TODO: use input data from the get go.
 		PaInputData inputData = makeFromSession(session);
+		if (inputData == null){
+			log.info("input data is null but should not be at this point.");
+		}
 		try {
 			if (inputData.getStopID() == null) {
 				skillContext.setNeedsLocation(true);
@@ -221,7 +224,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} finally {
-			saveInputToDB(PaInput.newInstance(session, inputData));
+			saveInputToDB(PaInput.newInstance(session.getUser().getUserId(), inputData));
 		}
 
 		List<Message> predictions = getPredictions(inputData);
@@ -239,6 +242,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 
 	private PaInputData makeFromSession(Session session) {
+		log.info("User ID" + ": " + session.getUser().getUserId());
 		// TODO: Make Session Data be a PaInput
 		// Map<String,String> sessionData= getInputValuesFromSession();
 		Map<String, Object> sessionData = session.getAttributes();

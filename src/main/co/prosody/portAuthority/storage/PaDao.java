@@ -16,9 +16,9 @@ public class PaDao {
         this.dynamoDbClient = dynamoDbClient;
     }
 
-    public void deletePaInput(Session session){
+    public void deletePaInput(String id){
     	PaUserDataItem item = new PaUserDataItem();
-        item.setCustomerId(session.getUser().getUserId());
+        item.setCustomerId(id);
         dynamoDbClient.deleteItem(item);
     }
     
@@ -30,9 +30,9 @@ public class PaDao {
      * @param session
      * @return
      */
-    public PaInput getPaInput(Session session) {
+    public PaInput getPaInput(String id) {
         PaUserDataItem item = new PaUserDataItem();
-        item.setCustomerId(session.getUser().getUserId());
+        item.setCustomerId(id);
 
         item = dynamoDbClient.loadItem(item);
 
@@ -40,7 +40,7 @@ public class PaDao {
             return null;
         }
 
-        return PaInput.newInstance(session, item.getInputData());
+        return PaInput.newInstance(id, item.getInputData());
     }
 
     /**
@@ -50,8 +50,7 @@ public class PaDao {
      */
     public void savePaInput(PaInput input) {
         PaUserDataItem item = new PaUserDataItem();
-        item.setCustomerId(input.getSession().getUser().getUserId());
-        //item.setGameData(game.getGameData());
+        item.setCustomerId(input.getID());
         item.setInputData(input.getData());
         dynamoDbClient.saveItem(item);
     }

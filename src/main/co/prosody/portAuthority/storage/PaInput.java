@@ -10,8 +10,8 @@ import com.amazon.speech.speechlet.Session;
  */
 public final class PaInput {
 	private static Logger log = LoggerFactory.getLogger(PaInput.class);
-    private Session session;
     private PaInputData data;
+    private String id;
 
     private PaInput() {
     }
@@ -28,19 +28,19 @@ public final class PaInput {
      * @return
      * @see PaInputData#newInstance()
      */
-    public static PaInput newInstance(Session session, PaInputData data) {
+    public static PaInput newInstance(String id, PaInputData data) {
         PaInput input = new PaInput();
-        input.setSession(session);
+        input.setID(id);
         input.setData(data);
         return input;
     }
-
-    protected void setSession(Session session) {
-        this.session = session;
+    
+    protected String getID(){
+    	return id;
     }
-
-    protected Session getSession() {
-        return session;
+    
+    protected void setID(String id){
+    	this.id = id;
     }
 
     public PaInputData getData() {

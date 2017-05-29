@@ -178,7 +178,7 @@ public class Instructions {
 		return poly;
 	}
 
-	// test
+	/*
 	protected static void main(String[] args) throws Exception {
 		String jsonData = "";
 		BufferedReader br = null;
@@ -206,5 +206,5 @@ public class Instructions {
 		System.out.println(Instructions.getInstructions(obj));
                 System.out.println(Instructions.printWayPoints(obj));
 
-	}
+	}*/
 }

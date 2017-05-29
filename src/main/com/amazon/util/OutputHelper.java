@@ -47,7 +47,7 @@ public class OutputHelper {
 	private static final String SUCCESS_MARKER="okay, ";
 	private static final String FAILED_MARKER="oh, ";
 	
-	public static final String ROUTE_PROMPT = "Which bus line would you like arrival information for?";
+	public static final String ROUTE_PROMPT = "BOP! Which bus line would you like arrival information for?";
 	public static final String HELP_ROUTE= "The Bus Line is usually a number, like sixty-seven, or a number and a letter, "
 			+ "like the seventy-one B , If you don't know what bus line you want, say, cancel, and go look it up on Google Maps";
 	
