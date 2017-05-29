@@ -259,15 +259,18 @@ public class GetNextBusSpeechlet implements Speechlet {
 		c.setLat(new Double(in.getLocationLat()).doubleValue());
 		c.setLng(new Double(in.getLocationLong()).doubleValue());
 
-		return NearestStopLocator.process(c, in.getRouteID(), in.getDirection());
+		//return NearestStopLocator.process(c, in.getRouteID(), in.getDirection());
+		return GoogleMaps.findNearestStop(c, in.getRouteID(), in.getDirection());
 	}
 
 	private List<Message> getPredictions(PaInputData inputData) {
 		List<Message> messages = new ArrayList<Message>();
 		if (skillContext.isAllRoutes()) {
-			messages = TrueTimeAPI.getPredictions(inputData.getStopID());
+			//messages = TrueTimeAPI.getPredictions(inputData.getStopID());
+			messages = TrueTime.generatePredictions(inputData.getStopID());
 		} else {
-			messages = TrueTimeAPI.getPredictions(inputData.getRouteID(), inputData.getStopID());
+			//messages = TrueTimeAPI.getPredictions(inputData.getRouteID(), inputData.getStopID());
+			messages = TrueTime.generatePredictions(inputData.getRouteID(), inputData.getStopID());
 		}
 		return messages;
 	}

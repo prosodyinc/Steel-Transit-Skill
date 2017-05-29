@@ -51,7 +51,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * lat- Latitude position of the stop in decimal degrees (WGS 84).
 	 * lon- Longitude position of the stop in decimal degrees (WGS 84).
 	 */
-	public static List<Message> getStops (String route, String direction){
+	protected static List<Message> getStops (String route, String direction){
 		//http://truetime.portauthority.org/bustime/api/v3/getdirections?key=2UfTSDVsRQTSWCke23DVcyviW&rtpidatafeed=Port%20Authority%20Bus&rt=67
 		String apiString= TRUETIME_URL+VERSION+CMD_STOPS+"?key="+TRUETIME_ACCESS_ID+"&rtpidatafeed="+AGENCY+"&rt="+route+"&dir="+direction;
 		log.debug("getStops:apiString="+apiString);
@@ -69,8 +69,8 @@ public class TrueTimeAPI extends BaseAPIParser {
 
 		
 	}
-	
-    /**
+	/* This was moved to LocationTracker
+    /** 
      * Gets list of stops for a route#
      * @param route
      * @param direction
@@ -78,7 +78,8 @@ public class TrueTimeAPI extends BaseAPIParser {
      * @throws IOException
      * @throws JSONException 
      */
-	public static List<Stop> getStopsAsJson(String route, String direction) throws IOException, JSONException{
+	/*
+	protected static List<Stop> getStopsAsJson(String route, String direction) throws IOException, JSONException{
     	log.trace("getStopsAsJson: route={}, direction={}", route, direction);
     	//String url =  "http://truetime.portauthority.org/bustime/api/v2/getstops?key=929FvbAPSEeyexCex5a7aDuus&rt="+routeID+"&dir="+direction.toUpperCase()+"&format=json";
     	String url= TRUETIME_URL+VERSION+CMD_STOPS+"?key="+TRUETIME_ACCESS_ID+"&rtpidatafeed="+AGENCY+"&rt="+route+"&dir="+direction.toUpperCase()+"&format=json";
@@ -86,11 +87,12 @@ public class TrueTimeAPI extends BaseAPIParser {
        List<Stop> listOfStops = null;
        stopsJSON = JsonUtils.readJsonFromUrl(url);
        
-       listOfStops = LocationTracker.getStopDetails(stopsJSON);
-       //listOfStops = GoogleMaps.generateStops(stopsJSON);
+       //TODO: should this be here?
+       //listOfStops = LocationTracker.getStopDetails(stopsJSON);
+       listOfStops = GoogleMaps.generateStops(stopsJSON);
        
        return listOfStops;
-    }
+    }*/
 	
 	
 
@@ -108,7 +110,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * lat- Latitude position of the stop in decimal degrees (WGS 84).
 	 * lon- Longitude position of the stop in decimal degrees (WGS 84).
 	 */
-	public List<Message> getStops (long stpid){
+	protected List<Message> getStops (long stpid){
 		List<Message> retval= new ArrayList<Message>();
 		Message msg=new Message();
 		msg.setError("TrueTimeMessageParser method notImplemented");
@@ -147,7 +149,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * tatripid -TA’s version of the scheduled trip identifier for the vehicle’s current trip.
 	 * zone- The zone name if the vehicle has entered a defined zones, otherwise blank.
 	 */
-	public static List<Message> getPredictions (String route, String stationID){
+	protected static List<Message> getPredictions (String route, String stationID){
 		List<Message> messages= new ArrayList<Message>();
 		String apiString= TRUETIME_URL+VERSION+CMD_PREDICTION+"?key="+TRUETIME_ACCESS_ID+"&rtpidatafeed="+AGENCY+"&rt="+route+"&stpid="+stationID;
 		log.info("getPredictions:apiString="+apiString);
@@ -183,11 +185,11 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * @param stationID
 	 * @return
 	 */
-	public static List<Message> getPredictions (String stationID){
+	protected static List<Message> getPredictions (String stationID){
 		return getPredictions(stationID, 10);
 	}
 	
-	public static List<Message> getPredictions (String stationID, int maxValues){
+	protected static List<Message> getPredictions (String stationID, int maxValues){
 		List<Message> messages= new ArrayList<Message>();
 		String apiString= TRUETIME_URL+VERSION+CMD_PREDICTION+"?key="+TRUETIME_ACCESS_ID+"&rtpidatafeed="+AGENCY+"&stpid="+stationID+"&top="+maxValues;
 		log.debug("getPredictions:apiString="+apiString);
@@ -206,7 +208,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	}
 
 
-	public static List<Message> parse(String apiString) 
+	protected static List<Message> parse(String apiString) 
 			throws IOException, SAXException, ParserConfigurationException {
 
 		//Create a "parser factory" for creating SAX parsers
@@ -231,7 +233,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * Date and time are represented in the following format: YYYYMMDD HH:MM:SS. Month is represented as two digits where January is “01” and December is “12”. Time is represented using a 24-hour clock. 
 	 * 
 	 */
-	public List<Message> getTime(){
+	protected List<Message> getTime(){
 		List<Message> retval= new ArrayList<Message>();
 		Message msg=new Message();
 		msg.setError("TrueTimeMessageParser method notImplemented");
@@ -266,7 +268,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * tatripid- TA’s version of the scheduled trip identifier for the vehicle’s current trip.
 	 * zone- The zone name if the vehicle has entered a defined zone, otherwise blank.
 	 */
-	public List<Message> getVehicles(){
+	protected List<Message> getVehicles(){
 		List<Message> retval= new ArrayList<Message>();
 		Message msg=new Message();
 		msg.setError("TrueTimeMessageParser method notImplemented");
@@ -284,7 +286,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * rtclr	Child element of the route element. Color of the route line used in map (ex. "#ffffff")
 	 * rtdd	Child element of the route element. Language-specific route designator meant for display.
 	 */
-	public static List<Message> getRoutes(){
+	protected static List<Message> getRoutes(){
 		////http://truetime.portauthority.org/bustime/api/v3/getroutes?key=2UfTSDVsRQTSWCke23DVcyviW&rtpidatafeed=Port%20Authority%20Bus&rt=67
 		String apiString= TRUETIME_URL+VERSION+CMD_ROUTES+"?key="+TRUETIME_ACCESS_ID+"&rtpidatafeed="+AGENCY;
 		log.debug("getRoutes:apiString="+apiString);
@@ -305,7 +307,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * 
 	 * @return
 	 */
-	public List<Message> getDirections(){
+	protected List<Message> getDirections(){
 		List<Message> retval= new ArrayList<Message>();
 		Message msg=new Message();
 		msg.setError("TrueTimeMessageParser method notImplemented");
@@ -335,7 +337,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * lat- Latitude position of the point in decimal degrees (WGS 84).
 	 * lon- Longitude position of the point in decimal degrees (WGS 84).
 	 */
-	public List<Message> getPatterns(){
+	protected List<Message> getPatterns(){
 		List<Message> retval= new ArrayList<Message>();
 		Message msg=new Message();
 		msg.setError("TrueTimeMessageParser method notImplemented");
@@ -347,7 +349,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * 
 	 * @return
 	 */
-	public List<Message> getLocaleList(){
+	protected List<Message> getLocaleList(){
 		List<Message> retval= new ArrayList<Message>();
 		Message msg=new Message();
 		msg.setError("TrueTimeMessageParser method notImplemented");
@@ -359,7 +361,7 @@ public class TrueTimeAPI extends BaseAPIParser {
 	 * 
 	 * @return
 	 */
-	public List<Message> getServiceBulletins(){
+	protected List<Message> getServiceBulletins(){
 		List<Message> retval= new ArrayList<Message>();
 		Message msg=new Message();
 		msg.setError("TrueTimeMessageParser method notImplemented");

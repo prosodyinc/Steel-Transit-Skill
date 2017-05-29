@@ -243,15 +243,15 @@ public class OutputHelper {
     private static Navigation buildNavigation(String locationLat, String locationLon, double stopLat, double stopLon) throws IOException, JSONException, Exception{	
     	Navigation navigation = new Navigation();
     	
-    	JSONObject json = NearestStopLocator.getDirections(locationLat, locationLon, stopLat, stopLon);
-        String instructions = Instructions.getInstructions(json);
+    	//JSONObject json = NearestStopLocator.getDirections(locationLat, locationLon, stopLat, stopLon);
+        //String instructions = Instructions.getInstructions(json);
         
-    	//String instructions = GoogleMaps.generateInstructions(locationLat, locationLon, stopLat, stopLon);
+    	String directions = GoogleMaps.generateDirections(locationLat, locationLon, stopLat, stopLon);
     	
         //Set image URL
-        String image = NearestStopLocator.buildImage(locationLat, locationLon, stopLat, stopLon) + Instructions.printWayPoints(json);
+        //String image = NearestStopLocator.buildImage(locationLat, locationLon, stopLat, stopLon) + Instructions.printWayPoints(json);
     	
-    	//String image = GoogleMaps.generateImageURL(locationLat, locationLon, stopLat, stopLon);
+    	String image = GoogleMaps.generateImageURL(locationLat, locationLon, stopLat, stopLon);
         image = image.substring(0, image.length() -1); //Remove the last '|'
         
         //Set image Name
@@ -263,7 +263,7 @@ public class OutputHelper {
         LOGGER.info("UPLOAD IMAGE SUCCESSFUL WITH NAME: "+imageName);
         
         //Set instructions and S3 image link to navigation object
-        navigation.setInstructions(instructions);
+        navigation.setInstructions(directions);
         navigation.setImage("https://s3.amazonaws.com/"+S3_BUCKET+"/"+IMG_FOLDER+"/"+ imageName+".png");
         LOGGER.info("SET IMAGE SUCCESSFUL");
         //LOGGER.info("IMAGE URL={}",image);

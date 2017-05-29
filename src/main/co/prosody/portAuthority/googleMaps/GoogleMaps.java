@@ -17,26 +17,22 @@ import co.prosody.portAuthority.util.Stop;
  */
 public class GoogleMaps {
 	
-	protected static Stop findNearestStop(Location source, String routeID, String direction) throws InvalidInputException, IOException, JSONException {
+	public static Stop findNearestStop(Location source, String routeID, String direction) throws InvalidInputException, IOException, JSONException {
 		return NearestStopLocator.process(source, routeID, direction);
 	}
 	
-	protected static Location findSourceLocation(String location) throws InvalidInputException, IOException, JSONException{
+	public static Location findSourceLocation(String location) throws InvalidInputException, IOException, JSONException{
 		return NearestStopLocator.getSourceLocation(location);
 	}
 	
-	protected static String generateInstructions(String locationLat, String locationLon, double stopLat, double stopLon) throws Exception {
+	public static String generateDirections(String locationLat, String locationLon, double stopLat, double stopLon) throws Exception {
 		JSONObject json = NearestStopLocator.getDirections(locationLat, locationLon, stopLat, stopLon);
         return Instructions.getInstructions(json);
 	}
 	
-	protected static String generateImageURL(String locationLat, String locationLon, double stopLat, double stopLon) throws Exception {
+	public static String generateImageURL(String locationLat, String locationLon, double stopLat, double stopLon) throws Exception {
 		JSONObject json = NearestStopLocator.getDirections(locationLat, locationLon, stopLat, stopLon);
 		return NearestStopLocator.buildImage(locationLat, locationLon, stopLat, stopLon) + Instructions.printWayPoints(json);
 	}
 	
-	// Maybe this should generate the json object from a route and direction instead of having one passed in
-	protected static List<Stop> generateStops(JSONObject json) throws JSONException{
-		return LocationTracker.getStopDetails(json);
-	}
 }

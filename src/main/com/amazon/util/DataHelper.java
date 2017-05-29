@@ -178,8 +178,8 @@ public class DataHelper {
 			location=LocationCorrector.getLocation(location);
 			log.info("putting value in session Slot Location:" + location);
 			session.setAttribute(LOCATION, location.toUpperCase());
-			Location c = NearestStopLocator.getSourceLocation(location);
-			//Location c = GoogleMaps.findSourceLocation(location);
+			//Location c = NearestStopLocator.getSourceLocation(location);
+			Location c = GoogleMaps.findSourceLocation(location);
 			
 			//String streetAddress = simplifyAddress(c.getAddress());
 			session.setAttribute(LAT, c.getLat());
@@ -255,8 +255,8 @@ public class DataHelper {
 
 	private static Route getMatchedRoute(String routeID) throws APIException {
 		Route output = null;
-		List<Message> routes = TrueTimeAPI.getRoutes();
-		//List<Message> routes = TrueTime.generateRoutes();
+		//List<Message> routes = TrueTimeAPI.getRoutes();
+		List<Message> routes = TrueTime.generateRoutes();
 		
 		Iterator<Message> iterator = routes.iterator();
 		while (iterator.hasNext()) {

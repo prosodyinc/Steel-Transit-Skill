@@ -13,7 +13,7 @@ public class GetNextBusSpeechletRequestStreamHandler extends
          * This Id can be found on https://developer.amazon.com/edw/home.html#/ "Edit" the relevant
          * Alexa Skill and put the relevant Application Ids in this Set.
          */
-    	//supportedApplicationIds.add("amzn1.ask.skill.cf8a7d33-3937-446a-911b-8eb17a2b649e"); //Test Transit
+    	supportedApplicationIds.add("amzn1.ask.skill.cf8a7d33-3937-446a-911b-8eb17a2b649e"); //Test Transit
         supportedApplicationIds.add("amzn1.echo-sdk-ams.app.4ef08e7f-8b6c-41d9-a2e1-51e56b7f74d8");
         supportedApplicationIds.add("amzn1.echo-sdk-ams.app.247dc98a-b0bb-4d86-9d22-2959e979da3c");
         supportedApplicationIds.add("amzn1.ask.skill.71a52a86-930b-464d-a47b-b488dddf271f");

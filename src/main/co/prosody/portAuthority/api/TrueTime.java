@@ -14,24 +14,25 @@ import co.prosody.portAuthority.util.Stop;
  */
 public class TrueTime {
 	
-	protected static List<Message> generatePredictions(String route, String stationID ){
+	public static List<Message> generatePredictions(String route, String stationID ){
 		return TrueTimeAPI.getPredictions(route, stationID);
 	}
 	
-	protected static List<Message> generatePredictions(String stationID, int maxValues){
+	public static List<Message> generatePredictions(String stationID, int maxValues){
 		return TrueTimeAPI.getPredictions(stationID, maxValues);
 	}
 	
-	protected static List<Message> generatePredictions(String stationID){
+	public static List<Message> generatePredictions(String stationID){
 		return TrueTimeAPI.getPredictions(stationID);
 	}
 	
+	/* This now resides in GoogleMaps
 	//similar to the GoogleMaps generateStops
 	protected static List<Stop> getStopsAsJson(String route, String direction) throws IOException, JSONException{
 		return TrueTimeAPI.getStopsAsJson(route, direction);
-	}
+	}*/
 	
-	protected static List<Message> generateRoutes() {
+	public static List<Message> generateRoutes() {
 		return TrueTimeAPI.getRoutes();
 	}
 	
