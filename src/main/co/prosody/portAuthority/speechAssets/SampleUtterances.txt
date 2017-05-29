@@ -1,22 +1,16 @@
-AllBusRoutesIntent all bus routes
-AllBusRoutesIntent all bus routes for this stop
-AllBusRoutesIntent all bus routes for this station
-
-ResetBusIntent reset history
-
-OneshotBusIntent when is the {Direction} {Route} 
+OneshotBusIntent when is the {Direction} {Route}
 OneshotBusIntent when is the {Direction} {Route} arriving at {Location}
 OneshotBusIntent when the {Direction} {Route} is
-OneshotBusIntent when the {Direction} {Route} is arriving at {Location} 
-OneshotBusIntent when is the next {Direction} {Route} 
+OneshotBusIntent when the {Direction} {Route} is arriving at {Location}
+OneshotBusIntent when is the next {Direction} {Route}
 OneshotBusIntent when is the next {Direction} {Route} arriving at {Location}
 OneshotBusIntent when the next {Direction} {Route} is
-OneshotBusIntent when the next {Direction} {Route} is arriving at {Location} 
+OneshotBusIntent when the next {Direction} {Route} is arriving at {Location}
+OneshotBusIntent when the next {Direction} {Route} arrives at {Location}
 
 DirectionBusIntent {Direction}
 DirectionBusIntent {Direction} downtown
 DirectionBusIntent {Direction} from downtown
-
 
 RouteBusIntent {Route}
 RouteBusIntent the {Route}
@@ -24,4 +18,11 @@ RouteBusIntent when is the next {Route}
 RouteBusIntent when the next {Route} is
 RouteBusIntent when does the next {Route} come
 
-LocationBusIntent {Location} 
+LocationBusIntent {Location}
+
+ResetBusIntent reset history
+
+AllBusRoutesIntent about all routes
+AllBusRoutesIntent all bus routes
+AllBusRoutesIntent all bus routes for this stop
+AllBusRoutesIntent all bus routes for this station
