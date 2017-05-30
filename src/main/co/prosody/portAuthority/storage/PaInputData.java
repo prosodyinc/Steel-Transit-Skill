@@ -3,6 +3,8 @@ package co.prosody.portAuthority.storage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.amazon.speech.speechlet.Session;
+
 import co.prosody.portAuthority.util.Location;
 import co.prosody.portAuthority.util.Stop;
 
@@ -11,9 +13,10 @@ import co.prosody.portAuthority.util.Stop;
  */
 public class PaInputData {
 	private static Logger log = LoggerFactory.getLogger(PaInputData.class);
-    
+    private String id; //The user ID of this input object
 
-	private String locationName;
+    /* -----data fields---- */
+    private String locationName;
 	private String locationAddress;
     private String locationLat;
     private String locationLong;
@@ -27,25 +30,31 @@ public class PaInputData {
     private String routeName;
     
     private String direction;
-
-    public PaInputData() {
-        // public no-arg constructor required for DynamoDBMapper marshalling
+    
+    /* ------------------- */
+    private PaInputData() {
     }
 
     /**
-     * Creates a new instance of {@link PaInputData} with initialized but empty player and
-     * score information.
-     * 
+     * Creates a new instance of {@link PaInputData} with the provided {@link id}
+     * @param id The user ID associated with this input data
      * @return
      */
-    public static PaInputData newInstance() {
-        PaInputData newInstance = new PaInputData();
-        //newInstance.setPlayers(new ArrayList<String>());
-        //newInstance.setScores(new HashMap<String, Long>());
-        return newInstance;
+    public static PaInputData newInstance(String id) {
+        PaInputData input = new PaInputData();
+        input.setID(id);
+        return input;
+    }
+    
+    protected String getID(){
+    	return id;
+    }
+    
+    protected void setID(String id){
+    	this.id = id;
     }
 
-	public String getLocationName() {
+    public String getLocationName() {
 		return locationName;
 	}
 
@@ -145,6 +154,10 @@ public class PaInputData {
 		setLocationLat(c.getLat() + "");
 		setLocationLong(c.getLng() + "");
 	}
+	
+	public boolean hasAllData() {
+        return (getStopName() != null && getDirection() != null && getRouteID() != null);
+    }
 	
 	public String toString() {
 		return "PaInputData [locationName=" + locationName + ", locationLat=" + locationLat + ", locationLong="
