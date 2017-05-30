@@ -93,13 +93,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 		skillContext = new SkillContext();
 		
-		PaInputData storedInput = this.getPaDao().getPaInputData(session.getUser().getUserId());
-
-		session.setAttribute(DataHelper.SESSION_OBJECT_NAME, storedInput);
-		
-		if (storedInput == null){
-			log.info("Called from onSessionStarted");
-		}
 	}
 	
 	/**
@@ -117,12 +110,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 		if (skillContext == null){
 			skillContext = new SkillContext();
 		}
-		if (session.getAttribute(DataHelper.SESSION_OBJECT_NAME) == null){
-			PaInputData storedInput = this.getPaDao().getPaInputData(session.getUser().getUserId());
-			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, storedInput);
-			log.info("Called from onIntent");
-		}
-		
 		
 		
 		log.info("onIntent intent={}, requestId={}, sessionId={}", request.getIntent().getName(),
@@ -152,7 +139,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 			case DataHelper.ALL_ROUTES_INTENT_NAME:
 				// try to retrieve current record for this user
-				PaInputData input = (PaInputData) session.getAttribute(DataHelper.SESSION_OBJECT_NAME);
+				PaInputData input = getPaDao().getPaInputData(session.getUser().getUserId());
 				
 				if ((input != null) && input.hasAllData()) { // if record found
 																// and the all
