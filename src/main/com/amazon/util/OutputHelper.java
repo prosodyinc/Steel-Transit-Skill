@@ -302,4 +302,11 @@ public class OutputHelper {
 		outputSpeech.setSsml("<speak> " + message + " </speak>");
 		return SpeechletResponse.newTellResponse(outputSpeech);
 	}
+
+	public static SpeechletResponse getFailureResponse(String failureLabel) {
+		String message = ("There has been a problem connecting to " + failureLabel + ". I'll let the developers know."); 
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		outputSpeech.setSsml("<speak> " + message + " </speak>");
+		return SpeechletResponse.newTellResponse(outputSpeech);
+	}
 }
