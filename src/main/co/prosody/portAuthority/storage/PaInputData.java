@@ -1,5 +1,7 @@
 package co.prosody.portAuthority.storage;
 
+import java.util.LinkedHashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +15,8 @@ import co.prosody.portAuthority.util.Stop;
  */
 public class PaInputData {
 	private static Logger log = LoggerFactory.getLogger(PaInputData.class);
-    private String id; //The user ID of this input object
+    
+	private String id; //The user ID of this input object
 
     /* -----data fields---- */
     private String locationName;
@@ -34,7 +37,44 @@ public class PaInputData {
     /* ------------------- */
     private PaInputData() {
     }
-
+    
+    public static PaInputData create(Object o, String id){
+    	PaInputData data = null;
+    	if (o instanceof LinkedHashMap){
+    		data = PaInputData.newInstance(id);
+    		LinkedHashMap<String, Object> map = (LinkedHashMap<String, Object>)o;
+    		data.setLocationName((String)map.get("locationName"));
+    		data.setLocationAddress((String)map.get("locationAddress"));
+    		data.setLocationLat((String)map.get("locationLat"));
+    		data.setLocationLong((String)map.get("locationLong"));
+    		
+    		data.setStopID((String)map.get("stopID"));
+    		data.setStopName((String)map.get("stopName"));
+    		
+    		try{
+    			data.setStopLat((Double)map.get("stopLat"));
+    		}
+    		catch (Exception e){
+    			data.setStopLat((Integer)map.get("stopLat"));
+    		}
+    		try{
+    			data.setStopLon((Double)map.get("stopLon"));
+    		} catch (Exception e){
+    			data.setStopLon((Integer)map.get("stopLon"));
+    		}
+    		
+    		data.setRouteID((String)map.get("routeID"));
+    		data.setRouteName((String)map.get("routeName"));
+    		
+    		data.setDirection((String)map.get("direction"));
+    	} else if (o instanceof PaInputData){
+    		data = (PaInputData)o;
+    	} else {
+    		throw new ClassCastException("Cannot create a PaInputData object with " + o.getClass().toString());
+    	}
+    	return data;
+    }
+    
     /**
      * Creates a new instance of {@link PaInputData} with the provided {@link id}
      * @param id The user ID associated with this input data
@@ -162,7 +202,15 @@ public class PaInputData {
 	public String toString() {
 		return "PaInputData [locationName=" + locationName + ", locationLat=" + locationLat + ", locationLong="
 				+ locationLong + ", stopID=" + stopID + ", stopName=" + stopName + ", stopLat=" + stopLat + ", stopLon="
-				+ stopLon + ", routeID=" + routeID + ", routeName=" + routeName + ", direction=" + direction + "]";
+				+ stopLon + ", routeID=" + routeID + ", routeName=" + routeName + ", direction=" + direction +"]";
 	}
-    
+	
+	/*
+	public String toString() {
+		return "PaInputData [locationName=" + locationName + ", locationLat=" + locationLat + ", locationLong="
+				+ locationLong + ", stopID=" + stopID + ", stopName=" + stopName + ", stopLat=" + stopLat + ", stopLon="
+				+ stopLon + ", routeID=" + routeID + ", routeName=" + routeName + ", direction=" + direction 
+				+ ", id=" + id +"]";
+	}
+    */
 }
