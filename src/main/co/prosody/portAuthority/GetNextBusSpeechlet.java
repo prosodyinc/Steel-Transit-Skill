@@ -65,7 +65,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		BasicConfigurator.configure();
 		log.info("onLaunch requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		// TODO: Pull the Skill Context out of history, too.
-		PaInputData storedInput = (PaInputData) session.getAttribute(DataHelper.SESSION_OBJECT_NAME);
+		PaInputData storedInput = getPaDao().getPaInputData(session.getUser().getUserId());
 		
 		if ((storedInput != null) && storedInput.hasAllData()) {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Return Saved");
