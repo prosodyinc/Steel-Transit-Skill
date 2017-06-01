@@ -25,7 +25,7 @@ public class ConversationRouter {
 		// DataHelper.LAST_QUESTION);
 
 		// Need Route, Location, and Direction
-		PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+		PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
 		if (data == null){
 			return OutputHelper.newTellResponse("something is wrong with the database object");
 		}

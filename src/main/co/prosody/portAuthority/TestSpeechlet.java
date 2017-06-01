@@ -90,7 +90,7 @@ public class TestSpeechlet implements Speechlet{
 			session.setAttribute("DataBase", data);
 		} else {
 			try {
-				data = PaInputData.create(session.getAttribute("DataBase"), session.getUser().getUserId());
+				data = PaInputData.create(session.getAttribute("DataBase"));
 			} catch (ClassCastException e){
 				log.info(e.getMessage());
 			}

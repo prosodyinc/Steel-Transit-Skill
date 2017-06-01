@@ -102,13 +102,9 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 		skillContext = new SkillContext();
 		
-		PaInputData storedInput = this.getPaDao().getPaInputData(session.getUser().getUserId());
-
-		if (storedInput != null){
-			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, storedInput);
-		} else {
-			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, PaInputData.newInstance(session.getUser().getUserId()));
-		}
+		// create a new data object and add it to the session.
+		session.setAttribute(DataHelper.SESSION_OBJECT_NAME, PaInputData.newInstance(session.getUser().getUserId()));
+		
 		
 		
 		log.info("Called from onSessionStarted {}", session.getAttribute(DataHelper.SESSION_OBJECT_NAME).getClass().toString());
@@ -141,7 +137,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			data = PaInputData.newInstance(session.getUser().getUserId());
 			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
 		} else {
-			data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+			data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
 		}
 		
 		
@@ -250,7 +246,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		analytics.postEvent(AnalyticsManager.CATEGORY_INTENT, "Collected all input");
 
 		// TODO: use input data from the get go.
-		PaInputData inputData = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+		PaInputData inputData = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
 		try {
 			if (inputData.getStopID() == null) {
 				skillContext.setNeedsLocation(true);
@@ -258,7 +254,10 @@ public class GetNextBusSpeechlet implements Speechlet {
 			} else {
 				skillContext.setNeedsLocation(false);
 			}
-			saveInputToDB(inputData);
+			//we only want to save the input if we successfully fetched all the data
+			if (inputData.hasAllData()){
+				saveInputToDB(inputData);
+			}
 		} catch (InvalidInputException | IOException | JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -540,7 +539,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			direction=DirectionCorrector.getDirection(direction);
 			log.info("putting value in session Slot " + DataHelper.DIRECTION +" : "+direction);
 			//session.setAttribute(DataHelper.DIRECTION, direction);
-			PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+			PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
 			DataHelper.addDirectionToConversation(data, direction);
 			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
 		} catch (Exception e) {
@@ -581,7 +580,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			
 			Location c = GoogleMaps.findSourceLocation(location);
 			
-			PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+			PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
 			DataHelper.addLocationToConversation(data, c);
 			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
 			//TODO: add this to skill context and interpret in OutputHelper
@@ -628,7 +627,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 				route = DataHelper.getMatchedRoute(routeID);
 
-				PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+				PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
 				log.info("putting value in session Slot " + DataHelper.ROUTE_ID+" : "+route.getId());
 
 				DataHelper.addRouteToConversation(data, route);
