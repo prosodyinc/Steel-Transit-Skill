@@ -16,9 +16,11 @@ import co.prosody.portAuthority.util.Stop;
 public class PaInputData {
 	private static Logger log = LoggerFactory.getLogger(PaInputData.class);
     
-	private String id; //The user ID of this input object
+	
 
     /* -----data fields---- */
+	private String id; //The user ID of this input object
+	
     private String locationName;
 	private String locationAddress;
     private String locationLat;
@@ -38,11 +40,11 @@ public class PaInputData {
     private PaInputData() {
     }
     
-    public static PaInputData create(Object o, String id){
+    public static PaInputData create(Object o){
     	PaInputData data = null;
     	if (o instanceof LinkedHashMap){
-    		data = PaInputData.newInstance(id);
     		LinkedHashMap<String, Object> map = (LinkedHashMap<String, Object>)o;
+    		data = PaInputData.newInstance((String)map.get("id"));
     		data.setLocationName((String)map.get("locationName"));
     		data.setLocationAddress((String)map.get("locationAddress"));
     		data.setLocationLat((String)map.get("locationLat"));
@@ -86,11 +88,11 @@ public class PaInputData {
         return input;
     }
     
-    protected String getID(){
+    public String getID(){
     	return id;
     }
     
-    protected void setID(String id){
+    public void setID(String id){
     	this.id = id;
     }
 
@@ -198,19 +200,19 @@ public class PaInputData {
 	public boolean hasAllData() {
         return (getStopName() != null && getDirection() != null && getRouteID() != null);
     }
-	
+	/*
 	public String toString() {
 		return "PaInputData [locationName=" + locationName + ", locationLat=" + locationLat + ", locationLong="
 				+ locationLong + ", stopID=" + stopID + ", stopName=" + stopName + ", stopLat=" + stopLat + ", stopLon="
 				+ stopLon + ", routeID=" + routeID + ", routeName=" + routeName + ", direction=" + direction +"]";
 	}
 	
-	/*
+	*/
 	public String toString() {
 		return "PaInputData [locationName=" + locationName + ", locationLat=" + locationLat + ", locationLong="
 				+ locationLong + ", stopID=" + stopID + ", stopName=" + stopName + ", stopLat=" + stopLat + ", stopLon="
 				+ stopLon + ", routeID=" + routeID + ", routeName=" + routeName + ", direction=" + direction 
 				+ ", id=" + id +"]";
 	}
-    */
+    
 }
