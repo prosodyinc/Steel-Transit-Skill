@@ -38,7 +38,8 @@ public class DataHelper {
 	private static Logger log = LoggerFactory.getLogger(DataHelper.class);
 
 	public static final String SESSION_OBJECT_NAME = "InputData";
-
+	public static final String SKILL_CONTEXT_NAME = "SkillContext";
+	
 	// INTENTS
 	public static final String ONE_SHOT_INTENT_NAME = "OneshotBusIntent";
 	public static final String RESET_INTENT_NAME = "ResetBusIntent";

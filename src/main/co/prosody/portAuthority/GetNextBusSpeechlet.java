@@ -58,8 +58,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 	public static final String INVOCATION_NAME = "Steel Transit";
 
-	private SkillContext skillContext;
-
 	private AmazonDynamoDBClient amazonDynamoDBClient;
 	private PaDynamoDbClient dynamoDbClient;
 	private PaDao inputDao;
@@ -74,19 +72,24 @@ public class GetNextBusSpeechlet implements Speechlet {
 		BasicConfigurator.configure();
 		log.info("onLaunch requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		// TODO: Pull the Skill Context out of history, too.
-		PaInputData storedInput = (PaInputData) session.getAttribute(DataHelper.SESSION_OBJECT_NAME);
+		PaInputData storedInput = getPaDao().getPaInputData(session.getUser().getUserId());
 		
+		SkillContext skillContext = SkillContext.create(session.getAttribute(DataHelper.SKILL_CONTEXT_NAME));
+				
 		if ((storedInput != null) && storedInput.hasAllData()) {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Return Saved");
 			skillContext.setNeedsLocation(false);
-			List<Message> predictions = getPredictions(storedInput);
-			return buildResponse(storedInput, predictions);
+			session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, skillContext);
+			List<Message> predictions = getPredictions(storedInput, skillContext);
+			return buildResponse(storedInput, predictions, skillContext);
 		} else {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Welcome");
-			//TODO: review whether this value should be placed in session by someone else. 
+			//TODO: place last question inside of skill context!
 			session.setAttribute(DataHelper.LAST_QUESTION, OutputHelper.ROUTE_PROMPT);
 			return OutputHelper.getWelcomeResponse();
 		}
+		
+		
 	}
 
 	/**
@@ -99,13 +102,10 @@ public class GetNextBusSpeechlet implements Speechlet {
 		analytics = new AnalyticsManager();
 		analytics.setUserId(session.getUser().getUserId());
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
-
-		skillContext = new SkillContext();
-		
-		// create a new data object and add it to the session.
+	
+		// create a new data object and context object and add it to the session.
 		session.setAttribute(DataHelper.SESSION_OBJECT_NAME, PaInputData.newInstance(session.getUser().getUserId()));
-		
-		
+		session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, SkillContext.newInstance());
 		
 		log.info("Called from onSessionStarted {}", session.getAttribute(DataHelper.SESSION_OBJECT_NAME).getClass().toString());
 		
@@ -127,24 +127,24 @@ public class GetNextBusSpeechlet implements Speechlet {
 			analytics.setUserId(session.getUser().getUserId());
 			analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
 		} 
-		if (skillContext == null){
-			skillContext = new SkillContext();
+		
+		if (session.getAttribute(DataHelper.SKILL_CONTEXT_NAME) == null){
+			log.info("Skill Context object is null, adding one now");
+			session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, SkillContext.newInstance());
 		}
 		
-		PaInputData data;
 		if (session.getAttribute(DataHelper.SESSION_OBJECT_NAME) == null){
 			log.info("Data object is null, adding one now");
-			data = PaInputData.newInstance(session.getUser().getUserId());
+			PaInputData data = PaInputData.newInstance(session.getUser().getUserId());
 			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
-		} else {
-			data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
-		}
+		} 
 		
 		
 		
 		String feedbackText = "";
 		try {
 			Intent intent = request.getIntent();
+			SkillContext skillContext = SkillContext.create(session.getAttribute(DataHelper.SKILL_CONTEXT_NAME));
 			analytics.postEvent(AnalyticsManager.CATEGORY_INTENT, intent.getName());
 			switch (intent.getName()) {
 			case "AMAZON.StopIntent":
@@ -177,11 +177,16 @@ public class GetNextBusSpeechlet implements Speechlet {
 					analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Return Saved");
 
 					// get predictions for all routes for this stop
+					
+					
 					skillContext.setAllRoutes(true);
 					skillContext.setNeedsLocation(false);
+					//TODO: Does this need to be here?
+					session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, skillContext);
+					
 					// TODO: Make this part of the normal conversation
-					List<Message> predictions = getPredictions(input);
-					return buildResponse(input, predictions);
+					List<Message> predictions = getPredictions(input, skillContext);
+					return buildResponse(input, predictions, skillContext);
 
 				} else { // if there is not enough information retrieved
 							// continue with conversation
@@ -193,6 +198,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 				// collect all the information provided by the user
 				
 				skillContext.setAllRoutes(false);
+				session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, skillContext);
 				if (getValueFromIntentSlot(intent, DataHelper.ROUTE_ID)!=null){
 					feedbackText = putRouteValuesInSession(session, intent);
 				}
@@ -206,26 +212,12 @@ public class GetNextBusSpeechlet implements Speechlet {
 				}
 
 				break;
-
-//			case DataHelper.DIRECTION_INTENT_NAME:
-//				// collect the direction information
-//				feedbackText = DataHelper.putDirectionValuesInSession(session, intent);
-//				break;
-//
-//			case DataHelper.LOCATION_INTENT_NAME:
-//				// collect the location information
-//				feedbackText = DataHelper.putLocationValuesInSession(session, intent);
-//				break;
-//
-//			case DataHelper.ROUTE_INTENT_NAME:
-//				// collect the route information
-//				feedbackText = DataHelper.putRouteValuesInSession(session, intent);
-//				break;
-			
-			//TODO: figure out the life cycle of skill context
+			//Either a route intent, direction intent, or location intent
 			default:
 				skillContext.setAllRoutes(false);
+				session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, skillContext);
 				feedbackText= ConversationRouter.putValuesInSession(session, intent);
+				break;
 			}
 
 		} catch (InvalidInputException e) {
@@ -247,10 +239,15 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 		// TODO: use input data from the get go.
 		PaInputData inputData = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
+		SkillContext skillContext = SkillContext.create(session.getAttribute(DataHelper.SKILL_CONTEXT_NAME));
+		log.info("This is right before it is crashing.");
 		try {
+			log.info("This is where it is crashing.");
 			if (inputData.getStopID() == null) {
 				skillContext.setNeedsLocation(true);
+				log.info("Right before inputData.setStop is called.");
 				inputData.setStop(getNearestStop(inputData));
+				log.info("Is nearest stop null? {}", inputData.getStopName());
 			} else {
 				skillContext.setNeedsLocation(false);
 			}
@@ -266,11 +263,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 		} finally {
 			//saveInputToDB(inputData);
 		}
-
-		List<Message> predictions = getPredictions(inputData);
+		//TODO: can getPredictions and buildResponse be combined?
+		List<Message> predictions = getPredictions(inputData, skillContext);
 		log.info(predictions.toString());
 		// get speech response
-		return buildResponse(inputData, predictions);
+		return buildResponse(inputData, predictions, skillContext);
 
 	}
 	
@@ -281,15 +278,17 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 	private Stop getNearestStop(PaInputData in) throws InvalidInputException, IOException, JSONException {
 		Location c = new Location();
+		
 		c.setAddress(in.getLocationAddress());
 		c.setLat(new Double(in.getLocationLat()).doubleValue());
 		c.setLng(new Double(in.getLocationLong()).doubleValue());
-
+		log.info("ADDRESS INFO: {} - Lat: {} - Long: {}", c.getAddress(), c.getLat(), c.getLng());
+		log.info("ROUTE INFO: ID: {} - direction: {}", in.getRouteID(), in.getDirection());
 		//return NearestStopLocator.process(c, in.getRouteID(), in.getDirection());
 		return GoogleMaps.findNearestStop(c, in.getRouteID(), in.getDirection());
 	}
 
-	private List<Message> getPredictions(PaInputData inputData) {
+	private List<Message> getPredictions(PaInputData inputData, SkillContext skillContext) {
 		List<Message> messages = new ArrayList<Message>();
 		if (skillContext.isAllRoutes()) {
 			//messages = TrueTimeAPI.getPredictions(inputData.getStopID());
@@ -301,7 +300,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		return messages;
 	}
 
-	private SpeechletResponse buildResponse(PaInputData inputData, List<Message> messages) {
+	private SpeechletResponse buildResponse(PaInputData inputData, List<Message> messages, SkillContext skillContext) {
 		SpeechletResponse output;
 		try {
 			if (messages.size() == 0) {
