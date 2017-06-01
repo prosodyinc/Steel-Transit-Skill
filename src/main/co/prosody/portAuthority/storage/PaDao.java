@@ -16,9 +16,9 @@ public class PaDao {
         this.dynamoDbClient = dynamoDbClient;
     }
 
-    public void deletePaInput(Session session){
+    public void deletePaInput(String id){
     	PaUserDataItem item = new PaUserDataItem();
-        item.setCustomerId(session.getUser().getUserId());
+        item.setCustomerId(id);
         dynamoDbClient.deleteItem(item);
     }
     
@@ -27,12 +27,12 @@ public class PaDao {
      * <p>
      * Returns null if the item could not be found in the database.
      * 
-     * @param session
-     * @return
+     * @param id The user ID
+     * @return the input data, if it exists, associated with this id
      */
-    public PaInput getPaInput(Session session) {
+    public PaInputData getPaInputData(String id) {
         PaUserDataItem item = new PaUserDataItem();
-        item.setCustomerId(session.getUser().getUserId());
+        item.setCustomerId(id);
 
         item = dynamoDbClient.loadItem(item);
 
@@ -40,19 +40,18 @@ public class PaDao {
             return null;
         }
 
-        return PaInput.newInstance(session, item.getInputData());
+        return item.getInputData();
     }
 
     /**
-     * Saves the {@link PaInput} into the database.
+     * Saves the {@link PaInputData} into the database.
      * 
      * @param input
      */
-    public void savePaInput(PaInput input) {
+    public void savePaInput(PaInputData input) {
         PaUserDataItem item = new PaUserDataItem();
-        item.setCustomerId(input.getSession().getUser().getUserId());
-        //item.setGameData(game.getGameData());
-        item.setInputData(input.getData());
+        item.setCustomerId(input.getID());
+        item.setInputData(input);
         dynamoDbClient.saveItem(item);
     }
 }

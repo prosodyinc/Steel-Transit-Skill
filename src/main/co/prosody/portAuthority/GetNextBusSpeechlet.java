@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.amazon.speech.slu.Intent;
+import com.amazon.speech.slu.Slot;
 import com.amazon.speech.speechlet.IntentRequest;
 import com.amazon.speech.speechlet.LaunchRequest;
 import com.amazon.speech.speechlet.Session;
@@ -32,6 +34,11 @@ import com.amazon.util.DataHelper;
 import com.amazon.util.OutputHelper;
 import com.amazon.util.SkillContext;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import co.prosody.portAuthority.api.Message;
@@ -39,7 +46,6 @@ import co.prosody.portAuthority.api.TrueTime;
 import co.prosody.portAuthority.api.TrueTimeAPI;
 import co.prosody.portAuthority.storage.PaDao;
 import co.prosody.portAuthority.storage.PaDynamoDbClient;
-import co.prosody.portAuthority.storage.PaInput;
 import co.prosody.portAuthority.storage.PaInputData;
 import co.prosody.portAuthority.util.*;
 import co.prosody.portAuthority.googleMaps.*;
@@ -47,6 +53,8 @@ import co.prosody.portAuthority.googleMaps.*;
 public class GetNextBusSpeechlet implements Speechlet {
 
 	private static Logger log = LoggerFactory.getLogger(GetNextBusSpeechlet.class);
+	
+	public static ObjectMapper mapper = new ObjectMapper();
 
 	public static final String INVOCATION_NAME = "Steel Transit";
 
@@ -66,13 +74,13 @@ public class GetNextBusSpeechlet implements Speechlet {
 		BasicConfigurator.configure();
 		log.info("onLaunch requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		// TODO: Pull the Skill Context out of history, too.
-		PaInput storedInput = this.getPaDao().getPaInput(session);
-
+		PaInputData storedInput = (PaInputData) session.getAttribute(DataHelper.SESSION_OBJECT_NAME);
+		
 		if ((storedInput != null) && storedInput.hasAllData()) {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Return Saved");
 			skillContext.setNeedsLocation(false);
-			List<Message> predictions = getPredictions(storedInput.getData());
-			return buildResponse(storedInput.getData(), predictions);
+			List<Message> predictions = getPredictions(storedInput);
+			return buildResponse(storedInput, predictions);
 		} else {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Welcome");
 			//TODO: review whether this value should be placed in session by someone else. 
@@ -87,27 +95,57 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 */
 	public void onSessionStarted(SessionStartedRequest request, Session session) throws SpeechletException {
 		log.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
-
+		
 		analytics = new AnalyticsManager();
 		analytics.setUserId(session.getUser().getUserId());
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
 
 		skillContext = new SkillContext();
-	}
+		
+		PaInputData storedInput = this.getPaDao().getPaInputData(session.getUser().getUserId());
 
+		if (storedInput != null){
+			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, storedInput);
+		} else {
+			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, PaInputData.newInstance(session.getUser().getUserId()));
+		}
+		
+		
+		log.info("Called from onSessionStarted {}", session.getAttribute(DataHelper.SESSION_OBJECT_NAME).getClass().toString());
+		
+	}
+	
 	/**
 	 * Called when the user invokes an intent.
 	 */
 	public SpeechletResponse onIntent(IntentRequest request, Session session) throws SpeechletException {
+		log.info("onIntent intent={}, requestId={}, sessionId={}", request.getIntent().getName(),
+				request.getRequestId(), session.getSessionId());
+		log.info("onIntent sessionValue={}", session.getAttributes().toString());
+		
+		/* It appears that onSessionStarted is not being called, at least when I test online. Don't know why that would be.. 
+		 * Maybe when you test online, onSessionStarted isn't called */
+		
 		if (analytics == null){
 			analytics = new AnalyticsManager();
 			analytics.setUserId(session.getUser().getUserId());
 			analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
+		} 
+		if (skillContext == null){
 			skillContext = new SkillContext();
 		}
-		log.info("onIntent intent={}, requestId={}, sessionId={}", request.getIntent().getName(),
-				request.getRequestId(), session.getSessionId());
-		log.info("onIntent sessionValue={}", session.getAttributes().toString());
+		
+		PaInputData data;
+		if (session.getAttribute(DataHelper.SESSION_OBJECT_NAME) == null){
+			log.info("Data object is null, adding one now");
+			data = PaInputData.newInstance(session.getUser().getUserId());
+			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
+		} else {
+			data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+		}
+		
+		
+		
 		String feedbackText = "";
 		try {
 			Intent intent = request.getIntent();
@@ -123,7 +161,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			case DataHelper.RESET_INTENT_NAME:
 				
 				// Delete current record for this user
-				this.getPaDao().deletePaInput(session);
+				this.getPaDao().deletePaInput(session.getUser().getUserId());
 
 				// Notify the user of success
 				PlainTextOutputSpeech outputSpeech = new PlainTextOutputSpeech();
@@ -132,8 +170,9 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 			case DataHelper.ALL_ROUTES_INTENT_NAME:
 				// try to retrieve current record for this user
-				PaInput input = getPaDao().getPaInput(session);
-
+				//PaInputData input = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+				PaInputData input = getPaDao().getPaInputData(session.getUser().getUserId());
+				
 				if ((input != null) && input.hasAllData()) { // if record found
 																// and the all
 																// necessary
@@ -145,8 +184,8 @@ public class GetNextBusSpeechlet implements Speechlet {
 					skillContext.setAllRoutes(true);
 					skillContext.setNeedsLocation(false);
 					// TODO: Make this part of the normal conversation
-					List<Message> predictions = getPredictions(input.getData());
-					return buildResponse(input.getData(), predictions);
+					List<Message> predictions = getPredictions(input);
+					return buildResponse(input, predictions);
 
 				} else { // if there is not enough information retrieved
 							// continue with conversation
@@ -158,16 +197,16 @@ public class GetNextBusSpeechlet implements Speechlet {
 				// collect all the information provided by the user
 				
 				skillContext.setAllRoutes(false);
-				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.ROUTE_ID)!=null){
-					feedbackText = DataHelper.putRouteValuesInSession(session, intent);
+				if (getValueFromIntentSlot(intent, DataHelper.ROUTE_ID)!=null){
+					feedbackText = putRouteValuesInSession(session, intent);
 				}
 
-				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.LOCATION)!=null){
-					feedbackText += DataHelper.putLocationValuesInSession(session, intent);
+				if (getValueFromIntentSlot(intent, DataHelper.LOCATION)!=null){
+					feedbackText += putLocationValuesInSession(session, intent);
 				}
 
-				if (DataHelper.getValueFromIntentSlot(intent, DataHelper.DIRECTION)!=null){
-					feedbackText += DataHelper.putDirectionValuesInSession(session, intent);
+				if (getValueFromIntentSlot(intent, DataHelper.DIRECTION)!=null){
+					feedbackText += putDirectionValuesInSession(session, intent);
 				}
 
 				break;
@@ -186,8 +225,10 @@ public class GetNextBusSpeechlet implements Speechlet {
 //				// collect the route information
 //				feedbackText = DataHelper.putRouteValuesInSession(session, intent);
 //				break;
-
+			
+			//TODO: figure out the life cycle of skill context
 			default:
+				skillContext.setAllRoutes(false);
 				feedbackText= ConversationRouter.putValuesInSession(session, intent);
 			}
 
@@ -209,7 +250,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		analytics.postEvent(AnalyticsManager.CATEGORY_INTENT, "Collected all input");
 
 		// TODO: use input data from the get go.
-		PaInputData inputData = makeFromSession(session);
+		PaInputData inputData = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
 		try {
 			if (inputData.getStopID() == null) {
 				skillContext.setNeedsLocation(true);
@@ -217,11 +258,14 @@ public class GetNextBusSpeechlet implements Speechlet {
 			} else {
 				skillContext.setNeedsLocation(false);
 			}
+			saveInputToDB(inputData);
 		} catch (InvalidInputException | IOException | JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return OutputHelper.getFailureResponse("Google Maps");
+			
 		} finally {
-			saveInputToDB(PaInput.newInstance(session, inputData));
+			//saveInputToDB(inputData);
 		}
 
 		List<Message> predictions = getPredictions(inputData);
@@ -230,27 +274,10 @@ public class GetNextBusSpeechlet implements Speechlet {
 		return buildResponse(inputData, predictions);
 
 	}
-
+	
 	public void onSessionEnded(SessionEndedRequest request, Session session) throws SpeechletException {
 		log.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_END);
-	}
-
-
-
-	private PaInputData makeFromSession(Session session) {
-		// TODO: Make Session Data be a PaInput
-		// Map<String,String> sessionData= getInputValuesFromSession();
-		Map<String, Object> sessionData = session.getAttributes();
-		PaInputData inputData = PaInputData.newInstance();
-		inputData.setDirection(sessionData.get(DataHelper.DIRECTION).toString());
-		inputData.setRouteID(sessionData.get(DataHelper.ROUTE_ID).toString());
-		inputData.setRouteName(sessionData.get(DataHelper.ROUTE_NAME).toString());
-		inputData.setLocationName(sessionData.get(DataHelper.LOCATION).toString());
-		inputData.setLocationAddress(sessionData.get(DataHelper.ADDRESS).toString());
-		inputData.setLocationLat(sessionData.get(DataHelper.LAT).toString());
-		inputData.setLocationLong(sessionData.get(DataHelper.LONG).toString());
-		return inputData;
 	}
 
 	private Stop getNearestStop(PaInputData in) throws InvalidInputException, IOException, JSONException {
@@ -419,10 +446,215 @@ public class GetNextBusSpeechlet implements Speechlet {
 		return this.inputDao;
 	}
 
-	private void saveInputToDB(PaInput input) {
+	private void saveInputToDB(PaInputData input) {
 		getPaDao().savePaInput(input);
 
 	}
+	
+	
+	
+	
+	/* Moved from DataHelper */
+	
+	public static ArrayList<String> getValidIntents() {
+		// if (validIntents!=null){
+		// return validIntents;
+		// } else {
+		ArrayList<String> validIntents = new ArrayList<String>();
+		validIntents.add(DataHelper.ONE_SHOT_INTENT_NAME);
+		validIntents.add(DataHelper.RESET_INTENT_NAME);
+		validIntents.add(DataHelper.ROUTE_INTENT_NAME);
+		validIntents.add(DataHelper.LOCATION_INTENT_NAME);
+		validIntents.add(DataHelper.DIRECTION_INTENT_NAME);
+		validIntents.add("AMAZON.StopIntent");
+		validIntents.add("AMAZON.CancelIntent");
+		validIntents.add("AMAZON.HelpIntent");
+		return validIntents;
+	}
+	
+	
+	
+	public static boolean isValidIntent(String intentName) {
+		return (getValidIntents().contains(intentName));
+	}
 
+	public static String getValueFromIntentSlot(Intent intent, String name) {
+		log.trace("getValueFromIntentSlot" + intent.getName());
+		Slot slot = intent.getSlot(name);
+		if (slot == null) {
+			log.error("Cannot get Slot={} for Intent={} ", name, intent.getName());
+			// if we can't return the requested slot from this intent
+			// return the default slot for the intent
+			slot = intent.getSlot(getSlotNameForIntentName(intent.getName()));
+		}
+		return (slot != null) ? slot.getValue() : null;
+	}
+
+	private static String getSlotNameForIntentName(String intentName) {
+		if (intentName == null) {
+			return null;
+		}
+
+		String output = null;
+		switch (intentName) {
+		case DataHelper.ROUTE_INTENT_NAME:
+			output = DataHelper.ROUTE_ID;
+			break;
+		case DataHelper.LOCATION_INTENT_NAME:
+			output = DataHelper.LOCATION;
+			break;
+		case DataHelper.DIRECTION_INTENT_NAME:
+			output = DataHelper.DIRECTION;
+			break;
+		}
+		return output;
+	}
+	
+	public static String getValueFromSession(Session session, String name) {
+		log.info("getValuesFromSession name={}",name);
+		if (session.getAttributes().containsKey(name)) {
+			return (String) session.getAttribute(name);
+		} else {
+			return null;
+		}
+	}
+	
+	public static String putDirectionValuesInSession(Session session, Intent intent) throws InvalidInputException {
+		log.trace("putDirectionValuesInSession" + intent.getName());
+
+		String direction = getValueFromIntentSlot(intent, DataHelper.DIRECTION);
+		log.info("retreivedSlot " + DataHelper.DIRECTION+" : "+direction);
+		if (direction == null) {
+			if (intent.getName().equals(DataHelper.ONE_SHOT_INTENT_NAME)) {
+				// For OneShotBusIntent, this is an acceptable condition.
+				log.info("Intent:" + intent.getName() + " direction is null");
+				return "";
+			} else {
+				log.info("Intent:" + intent.getName() + " direction is null");
+				throw new InvalidInputException("No Direction in Intent",
+						"Please repeat your direction. " + OutputHelper.DIRECTION_PROMPT);
+			}
+		}
+
+		try {
+			direction=DirectionCorrector.getDirection(direction);
+			log.info("putting value in session Slot " + DataHelper.DIRECTION +" : "+direction);
+			//session.setAttribute(DataHelper.DIRECTION, direction);
+			PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+			DataHelper.addDirectionToConversation(data, direction);
+			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
+		} catch (Exception e) {
+			throw new InvalidInputException(e.getMessage(), e, "Please repeat your direction. " + OutputHelper.DIRECTION_PROMPT);
+		}
+
+		return "";
+	}
+	
+	
+	/**
+	 * The location held in the intent's slot might contain an address or a
+	 * landmark or business name. Here we call the Google Maps API to translate
+	 * that to a street address and put it in session.
+	 */
+	public static String putLocationValuesInSession(Session session, Intent intent) throws InvalidInputException {
+		log.info("putLocationValuesInSession" + intent.getName());
+		String location = getValueFromIntentSlot(intent, DataHelper.LOCATION);
+		log.info("retreivedSlot " + DataHelper.LOCATION+" : "+location);
+
+		// Handle Null Location
+		if (location == null) {
+			if (intent.getName().equals(DataHelper.ONE_SHOT_INTENT_NAME)) {
+				// For OneShotBusIntent, this is an acceptable condition.
+				log.info("Intent:" + intent.getName() + " location is null");
+				return "";
+			} else {
+				log.info("Intent:" + intent.getName() + " location is null");
+				throw new InvalidInputException("No Location in Intent",
+						"Please repeat your location. " + OutputHelper.LOCATION_PROMPT);
+			}
+		}
+
+		// Find address for location
+		try {
+			location=LocationCorrector.getLocation(location);
+			log.info("putting value in session Slot Location:" + location);
+			
+			Location c = GoogleMaps.findSourceLocation(location);
+			
+			PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+			DataHelper.addLocationToConversation(data, c);
+			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
+			//TODO: add this to skill context and interpret in OutputHelper
+			if (!c.isAddress()) {
+				return "I found " + location + " at " + c.getStreetAddress() + ".";
+			}
+
+		} catch (JSONException jsonE) {
+			throw new InvalidInputException("No Location in Intent", jsonE,
+					"Please repeat your location. " + OutputHelper.LOCATION_PROMPT);
+		} catch (IOException ioE) {
+			throw new InvalidInputException("Cannot reach Google Maps ", ioE,
+					"Please repeat your location. " + OutputHelper.LOCATION_PROMPT);
+		} catch (UnexpectedInputException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return "";
+	}
+	
+	
+	/// Route
+		public static String putRouteValuesInSession(Session session, Intent intent) throws InvalidInputException {
+			log.info("putRouteValuesInSession" + intent.getName());
+			Route route;
+
+			String routeID = getValueFromIntentSlot(intent, DataHelper.ROUTE_ID);
+			log.info("retreivedSlot " + DataHelper.ROUTE_ID+" : "+routeID);
+
+			// Handle Null routeID
+			if (routeID == null) {
+				if (intent.getName().equals(DataHelper.ONE_SHOT_INTENT_NAME)) {
+					// For OneShotBusIntent, this is an acceptable condition.
+					log.info("Intent:" + intent.getName() + " routeID is null");
+					return "";
+				} else {
+					log.info("Intent:" + intent.getName() + " routeID is null");
+					throw new InvalidInputException("No routeID in Intent", "Please repeat your bus line. " + OutputHelper.ROUTE_PROMPT);
+				}
+			}
+
+			try {
+				routeID = RouteCorrector.getRoute(routeID);
+
+				route = DataHelper.getMatchedRoute(routeID);
+
+				PaInputData data = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME), session.getUser().getUserId());
+				log.info("putting value in session Slot " + DataHelper.ROUTE_ID+" : "+route.getId());
+
+				DataHelper.addRouteToConversation(data, route);
+				session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
+
+			} catch (UnexpectedInputException e) {
+				//TODO: Rephrase if question different.
+				//TODO: use skill context instead
+				String lastQuestion=getValueFromSession(session, DataHelper.LAST_QUESTION);
+				log.error("UnexpectedInputException:Message={}:LastQuestion={}",e.getMessage(),lastQuestion);
+				
+				if ((lastQuestion!=null)&&(lastQuestion.equals(OutputHelper.LOCATION_PROMPT))){
+					throw new InvalidInputException(e.getMessage(), e, OutputHelper.HELP_INTENT);
+				}
+				throw new InvalidInputException(e.getMessage(), e, "Please repeat your bus line. " + OutputHelper.ROUTE_PROMPT);
+				
+			} catch (APIException apiE) {
+				throw new InvalidInputException("Route does not match API",
+						"Could not find the bus line " + routeID + "." + OutputHelper.ROUTE_PROMPT);
+			}
+
+			return route.getId() + "," + route.getName();
+
+		}
+		
+		
+		
 }
 

@@ -61,6 +61,7 @@ public class DataHelper {
 
 	// private ArrayList<String> validIntents = null;
 
+	/*
 	public static ArrayList<String> getValidIntents() {
 		// if (validIntents!=null){
 		// return validIntents;
@@ -121,40 +122,64 @@ public class DataHelper {
 			return null;
 		}
 	}
-
-	public static String putDirectionValuesInSession(Session session, Intent intent) throws InvalidInputException {
-		log.trace("putDirectionValuesInSession" + intent.getName());
-
-		String direction = getValueFromIntentSlot(intent, DIRECTION);
-		log.info("retreivedSlot " + DIRECTION+" : "+direction);
-		if (direction == null) {
-			if (intent.getName().equals(ONE_SHOT_INTENT_NAME)) {
-				// For OneShotBusIntent, this is an acceptable condition.
-				log.info("Intent:" + intent.getName() + " direction is null");
-				return "";
-			} else {
-				log.info("Intent:" + intent.getName() + " direction is null");
-				throw new InvalidInputException("No Direction in Intent",
-						"Please repeat your direction. " + OutputHelper.DIRECTION_PROMPT);
-			}
-		}
-
-		try {
-			direction=DirectionCorrector.getDirection(direction);
-			log.info("putting value in session Slot " + DIRECTION+" : "+direction);
-			session.setAttribute(DIRECTION, direction);
-		} catch (Exception e) {
-			throw new InvalidInputException(e.getMessage(), e, "Please repeat your direction. " + OutputHelper.DIRECTION_PROMPT);
-		}
-
-		return "";
+	*/
+//	public static String putDirectionValuesInSession(Session session, Intent intent) throws InvalidInputException {
+//		log.trace("putDirectionValuesInSession" + intent.getName());
+//
+//		String direction = getValueFromIntentSlot(intent, DIRECTION);
+//		log.info("retreivedSlot " + DIRECTION+" : "+direction);
+//		if (direction == null) {
+//			if (intent.getName().equals(ONE_SHOT_INTENT_NAME)) {
+//				// For OneShotBusIntent, this is an acceptable condition.
+//				log.info("Intent:" + intent.getName() + " direction is null");
+//				return "";
+//			} else {
+//				log.info("Intent:" + intent.getName() + " direction is null");
+//				throw new InvalidInputException("No Direction in Intent",
+//						"Please repeat your direction. " + OutputHelper.DIRECTION_PROMPT);
+//			}
+//		}
+//
+//		try {
+//			direction=DirectionCorrector.getDirection(direction);
+//			log.info("putting value in session Slot " + DIRECTION+" : "+direction);
+//			session.setAttribute(DIRECTION, direction);
+//		} catch (Exception e) {
+//			throw new InvalidInputException(e.getMessage(), e, "Please repeat your direction. " + OutputHelper.DIRECTION_PROMPT);
+//		}
+//
+//		return "";
+//	}
+	
+	public static void addDirectionToConversation(PaInputData data, String direction){
+		if (direction != null)
+		data.setDirection(direction);
 	}
-
-	/**
+	
+	public static void addLocationToConversation(PaInputData data, Location loc){
+		if (loc != null){
+		data.setLocation(loc);
+		data.setLocationName(loc.getName());
+		data.setLocationLat("" + loc.getLat());
+		data.setLocationLong("" + loc.getLng());
+		data.setLocationAddress(loc.getAddress());
+		}
+	}
+	
+	public static void addRouteToConversation(PaInputData data, Route route){
+		if (route != null){
+		data.setRouteID(route.getId());
+		data.setRouteName(route.getName());
+		}
+	}
+	
+	
+	/*
+	*//**
 	 * The location held in the intent's slot might contain an address or a
 	 * landmark or business name. Here we call the Google Maps API to translate
 	 * that to a street address and put it in session.
-	 */
+	 *//*
 	public static String putLocationValuesInSession(Session session, Intent intent) throws InvalidInputException {
 		log.info("putLocationValuesInSession" + intent.getName());
 		String location = getValueFromIntentSlot(intent, LOCATION);
@@ -201,11 +226,12 @@ public class DataHelper {
 			e.printStackTrace();
 		}
 		return "";
-	}
-
-
-
+	}*/
+	
+	
+	
 	/// Route
+	/*
 	public static String putRouteValuesInSession(Session session, Intent intent) throws InvalidInputException {
 		log.info("putRouteValuesInSession" + intent.getName());
 		Route route;
@@ -252,8 +278,8 @@ public class DataHelper {
 		return route.getId() + "," + route.getName();
 
 	}
-
-	private static Route getMatchedRoute(String routeID) throws APIException {
+*/
+	public static Route getMatchedRoute(String routeID) throws APIException {
 		Route output = null;
 		//List<Message> routes = TrueTimeAPI.getRoutes();
 		List<Message> routes = TrueTime.generateRoutes();

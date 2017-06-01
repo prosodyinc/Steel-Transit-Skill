@@ -99,7 +99,7 @@ public class ImageUploader {
                 .withCannedAcl(CannedAccessControlList.PublicRead));
     }
 
-    public static void main(String[] args) throws MalformedURLException, IOException {
-        uploadImage("https://maps.googleapis.com/maps/api/staticmap?size=1200x800&maptype=roadmap&key=AIzaSyAOTkkr2SDnAQi8-fohOn4rUinICd-pHVA&format=png&visual_refresh=true&markers=size:mid%7Ccolor:0xff0000%7Clabel:1%7C40.43325099999999,-79.923598&markers=size:mid%7Ccolor:0xff0000%7Clabel:2%7C40.433700261186,-79.922931511244&path=color:0x0000ff|weight:5|40.43338,-79.92379|40.43338,-79.92379|40.43342,-79.92375|40.43342,-79.92375|40.43346,-79.9237|40.43346,-79.9237|40.4335,-79.92364|40.4335,-79.92364|40.43354,-79.92358|40.43354,-79.92358|40.43358,-79.92351|40.43358,-79.92351|40.43361,-79.92344|40.43361,-79.92344|40.43363,-79.92338|40.43363,-79.92338|40.43366,-79.92331|40.43366,-79.92331|40.43368,-79.92324|40.43368,-79.92324|40.4337,-79.92317|40.4337,-79.92317|40.43373,-79.92296|40.43373,-79.92296", "abc", "image", "ppas-image-upload");
-    }
+    //public static void main(String[] args) throws MalformedURLException, IOException {
+      //  uploadImage("https://maps.googleapis.com/maps/api/staticmap?size=1200x800&maptype=roadmap&key=AIzaSyAOTkkr2SDnAQi8-fohOn4rUinICd-pHVA&format=png&visual_refresh=true&markers=size:mid%7Ccolor:0xff0000%7Clabel:1%7C40.43325099999999,-79.923598&markers=size:mid%7Ccolor:0xff0000%7Clabel:2%7C40.433700261186,-79.922931511244&path=color:0x0000ff|weight:5|40.43338,-79.92379|40.43338,-79.92379|40.43342,-79.92375|40.43342,-79.92375|40.43346,-79.9237|40.43346,-79.9237|40.4335,-79.92364|40.4335,-79.92364|40.43354,-79.92358|40.43354,-79.92358|40.43358,-79.92351|40.43358,-79.92351|40.43361,-79.92344|40.43361,-79.92344|40.43363,-79.92338|40.43363,-79.92338|40.43366,-79.92331|40.43366,-79.92331|40.43368,-79.92324|40.43368,-79.92324|40.4337,-79.92317|40.4337,-79.92317|40.43373,-79.92296|40.43373,-79.92296", "abc", "image", "ppas-image-upload");
+    //}
 }
