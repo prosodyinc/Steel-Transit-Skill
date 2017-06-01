@@ -12,7 +12,7 @@ public class SkillContext {
     private boolean allRoutes;
     private boolean needsLocation;
     private boolean needsBusStop;
-
+    private String lastQuestion;
     public static SkillContext create(Object o){
     	SkillContext context = null;
     	if (o instanceof LinkedHashMap){
@@ -22,6 +22,7 @@ public class SkillContext {
     		context.setAllRoutes((boolean)(map.get("allRoutes")));
     		context.setNeedsLocation((boolean)(map.get("needsLocation")));
     		context.setNeedsBusStop((boolean)(map.get("needsBusStop")));
+    		context.setLastQuestion((String)map.get("lastQuestion"));
     	} else if (o instanceof SkillContext){
     		context = (SkillContext)o;
     	} else {
@@ -36,6 +37,7 @@ public class SkillContext {
     	context.setNeedsBusStop(true);
     	context.setNeedsLocation(true);
     	context.setNeedsMoreHelp(true);
+    	context.setLastQuestion(OutputHelper.ROUTE_PROMPT);
     	return context;
     }
     
@@ -69,5 +71,12 @@ public class SkillContext {
 
 	public void setNeedsBusStop(boolean needsBusStop) {
 		this.needsBusStop = needsBusStop;
+	}
+	
+	public String getLastQuestion(){
+		return lastQuestion;
+	}
+	public void setLastQuestion(String lastQuestion){
+		this.lastQuestion = lastQuestion;
 	}
 }

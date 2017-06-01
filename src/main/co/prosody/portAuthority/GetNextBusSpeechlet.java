@@ -240,14 +240,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 		// TODO: use input data from the get go.
 		PaInputData inputData = PaInputData.create(session.getAttribute(DataHelper.SESSION_OBJECT_NAME));
 		SkillContext skillContext = SkillContext.create(session.getAttribute(DataHelper.SKILL_CONTEXT_NAME));
-		log.info("This is right before it is crashing.");
 		try {
 			log.info("This is where it is crashing.");
 			if (inputData.getStopID() == null) {
 				skillContext.setNeedsLocation(true);
-				log.info("Right before inputData.setStop is called.");
 				inputData.setStop(getNearestStop(inputData));
-				log.info("Is nearest stop null? {}", inputData.getStopName());
 			} else {
 				skillContext.setNeedsLocation(false);
 			}
