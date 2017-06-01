@@ -13,6 +13,7 @@ public class SkillContext {
     private boolean needsLocation;
     private boolean needsBusStop;
     private String lastQuestion;
+    private String feedbackText;
     public static SkillContext create(Object o){
     	SkillContext context = null;
     	if (o instanceof LinkedHashMap){
@@ -23,6 +24,7 @@ public class SkillContext {
     		context.setNeedsLocation((boolean)(map.get("needsLocation")));
     		context.setNeedsBusStop((boolean)(map.get("needsBusStop")));
     		context.setLastQuestion((String)map.get("lastQuestion"));
+    		context.setFeedbackText((String)map.get("feedbackText"));
     	} else if (o instanceof SkillContext){
     		context = (SkillContext)o;
     	} else {
@@ -38,6 +40,7 @@ public class SkillContext {
     	context.setNeedsLocation(true);
     	context.setNeedsMoreHelp(true);
     	context.setLastQuestion(OutputHelper.ROUTE_PROMPT);
+    	context.setFeedbackText("");
     	return context;
     }
     
@@ -78,5 +81,17 @@ public class SkillContext {
 	}
 	public void setLastQuestion(String lastQuestion){
 		this.lastQuestion = lastQuestion;
+	}
+	
+	public String getFeedbackText(){
+		return feedbackText;
+	}
+	
+	public void setFeedbackText(String feedbackText){
+		this.feedbackText = feedbackText;
+	}
+	
+	public void addFeedbackText(String additionalText){
+		this.feedbackText += additionalText;
 	}
 }
