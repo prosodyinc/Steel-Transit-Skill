@@ -10,7 +10,7 @@ public class ConversationRouter {
 	private static Logger log = LoggerFactory.getLogger(DataHelper.class);
 
 
-	public static void checkForAdditionalQuestions(PaInputData data, SkillContext skillContext) {
+	public static void checkForAdditionalQuestions(final PaInputData data, SkillContext skillContext) {
 		if (data.getRouteID() == null) {
 			skillContext.setLastQuestion(OutputHelper.ROUTE_PROMPT);
 		} else if (data.getDirection() == null) {
