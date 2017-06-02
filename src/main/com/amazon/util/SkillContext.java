@@ -12,6 +12,7 @@ public class SkillContext {
     private boolean allRoutes;
     private boolean needsLocation;
     private boolean needsBusStop;
+    private boolean additionalQuestions;
     private String lastQuestion;
     private String feedbackText;
     public static SkillContext create(Object o){
@@ -23,6 +24,7 @@ public class SkillContext {
     		context.setAllRoutes((boolean)(map.get("allRoutes")));
     		context.setNeedsLocation((boolean)(map.get("needsLocation")));
     		context.setNeedsBusStop((boolean)(map.get("needsBusStop")));
+    		context.setAdditionalQuestions((boolean)(map.get("additionalQuestions")));
     		context.setLastQuestion((String)map.get("lastQuestion"));
     		context.setFeedbackText((String)map.get("feedbackText"));
     	} else if (o instanceof SkillContext){
@@ -39,6 +41,7 @@ public class SkillContext {
     	context.setNeedsBusStop(true);
     	context.setNeedsLocation(true);
     	context.setNeedsMoreHelp(true);
+    	context.setAdditionalQuestions(true);
     	context.setLastQuestion(OutputHelper.ROUTE_PROMPT);
     	context.setFeedbackText("");
     	return context;
@@ -74,6 +77,14 @@ public class SkillContext {
 
 	public void setNeedsBusStop(boolean needsBusStop) {
 		this.needsBusStop = needsBusStop;
+	}
+	
+	public boolean getAdditionalQuestions(){
+		return additionalQuestions;
+	}
+	
+	public void setAdditionalQuestions(boolean additionalQuestions){
+		this.additionalQuestions = additionalQuestions;
 	}
 	
 	public String getLastQuestion(){

@@ -77,7 +77,7 @@ public class DataHelper {
 			data.setLocationAddress(c.getAddress());
 			
 			if (!c.isAddress()) {
-				skillContext.addFeedbackText("I found " + location + " at " + c.getStreetAddress() + ".");
+				skillContext.addFeedbackText("I found " + location + " at " + c.getStreetAddress() + ". ");
 			}
 
 		} catch (JSONException jsonE) {
@@ -118,7 +118,7 @@ public class DataHelper {
 					"Could not find the bus line " + routeID + "." + OutputHelper.ROUTE_PROMPT);
 		}
 
-		skillContext.setFeedbackText(route.getId() + "," + route.getName());
+		skillContext.setFeedbackText(route.getId() + "," + route.getName() + ", ");
 
 	}
 	
