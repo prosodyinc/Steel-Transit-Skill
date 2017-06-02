@@ -1,15 +1,50 @@
 package com.amazon.util;
 
+import java.util.LinkedHashMap;
+
+import co.prosody.portAuthority.storage.PaInputData;
+
 /**
  * Contains session scoped settings.
  */
 public class SkillContext {
-    private boolean needsMoreHelp = true;
-    private boolean allRoutes = false;
-    private boolean needsLocation=true;
-    private boolean needsBusStop=true;
-
-    public boolean needsMoreHelp() {
+    private boolean needsMoreHelp;
+    private boolean allRoutes;
+    private boolean needsLocation;
+    private boolean needsBusStop;
+    private String lastQuestion;
+    private String feedbackText;
+    public static SkillContext create(Object o){
+    	SkillContext context = null;
+    	if (o instanceof LinkedHashMap){
+    		LinkedHashMap<String, Object> map = (LinkedHashMap<String, Object>)o;
+    		context = SkillContext.newInstance();
+    		context.setNeedsMoreHelp((boolean)(map.get("needsMoreHelp")));
+    		context.setAllRoutes((boolean)(map.get("allRoutes")));
+    		context.setNeedsLocation((boolean)(map.get("needsLocation")));
+    		context.setNeedsBusStop((boolean)(map.get("needsBusStop")));
+    		context.setLastQuestion((String)map.get("lastQuestion"));
+    		context.setFeedbackText((String)map.get("feedbackText"));
+    	} else if (o instanceof SkillContext){
+    		context = (SkillContext)o;
+    	} else {
+    		throw new ClassCastException("Cannot create a SkillContext object with " + o.getClass().toString());
+    	}
+    	return context;
+    }
+    
+    public static SkillContext newInstance(){
+    	SkillContext context = new SkillContext();
+    	context.setAllRoutes(false);
+    	context.setNeedsBusStop(true);
+    	context.setNeedsLocation(true);
+    	context.setNeedsMoreHelp(true);
+    	context.setLastQuestion(OutputHelper.ROUTE_PROMPT);
+    	context.setFeedbackText("");
+    	return context;
+    }
+    
+    public boolean getNeedsMoreHelp() {
         return needsMoreHelp;
     }
 
@@ -25,7 +60,7 @@ public class SkillContext {
 		this.allRoutes = showAllRoutes;
 	}
 
-	public boolean needsLocation() {
+	public boolean getNeedsLocation() {
 		return needsLocation;
 	}
 
@@ -33,11 +68,30 @@ public class SkillContext {
 		this.needsLocation = needsLocation;
 	}
 
-	public boolean needsBusStop() {
+	public boolean getNeedsBusStop() {
 		return needsBusStop;
 	}
 
 	public void setNeedsBusStop(boolean needsBusStop) {
 		this.needsBusStop = needsBusStop;
+	}
+	
+	public String getLastQuestion(){
+		return lastQuestion;
+	}
+	public void setLastQuestion(String lastQuestion){
+		this.lastQuestion = lastQuestion;
+	}
+	
+	public String getFeedbackText(){
+		return feedbackText;
+	}
+	
+	public void setFeedbackText(String feedbackText){
+		this.feedbackText = feedbackText;
+	}
+	
+	public void addFeedbackText(String additionalText){
+		this.feedbackText += additionalText;
 	}
 }

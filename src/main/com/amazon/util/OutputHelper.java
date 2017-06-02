@@ -138,7 +138,7 @@ public class OutputHelper {
 	public static SpeechletResponse getNoResponse(PaInputData inputData, SkillContext c) {
 		SsmlOutputSpeech outputSpeech=new SsmlOutputSpeech();
 		String textOutput="";
-		if (c.needsLocation()){
+		if (c.getNeedsLocation()){
 			textOutput=String.format(LOCATION_SPEECH, inputData.getLocationName(), inputData.getStopName()); 
 		}
 
@@ -148,7 +148,7 @@ public class OutputHelper {
 			textOutput+=String.format(NO_SINGLE_ROUTE_SPEECH, inputData.getDirection(), inputData.getRouteID() , inputData.getStopName());
 		}
 
-		if ((c.needsMoreHelp())&&(!c.isAllRoutes())){
+		if ((c.getNeedsMoreHelp())&&(!c.isAllRoutes())){
 			textOutput+=HELP_ALL_ROUTES_SPEECH;
 			
 		}
@@ -173,7 +173,7 @@ public class OutputHelper {
 		//final String allRoutesHelpText=" <break time=\"0.25s\" />  to hear predictions for all routes that stop "+BUSSTOP_SPEECH+  ", say <break time=\"0.25s\" /> Alexa, ask "+GetNextBusSpeechlet.INVOCATION_NAME+" for All Routes";
 
 
-		if (c.needsLocation()){
+		if (c.getNeedsLocation()){
 			textOutput=String.format(LOCATION_SPEECH, inputData.getLocationName(), inputData.getStopName());
 		} else {
 			textOutput=String.format(BUSSTOP_SPEECH, inputData.getStopName()) ;
@@ -242,14 +242,8 @@ public class OutputHelper {
         }
     private static Navigation buildNavigation(String locationLat, String locationLon, double stopLat, double stopLon) throws IOException, JSONException, Exception{	
     	Navigation navigation = new Navigation();
-    	
-    	//JSONObject json = NearestStopLocator.getDirections(locationLat, locationLon, stopLat, stopLon);
-        //String instructions = Instructions.getInstructions(json);
         
     	String directions = GoogleMaps.generateDirections(locationLat, locationLon, stopLat, stopLon);
-    	
-        //Set image URL
-        //String image = NearestStopLocator.buildImage(locationLat, locationLon, stopLat, stopLon) + Instructions.printWayPoints(json);
     	
     	String image = GoogleMaps.generateImageURL(locationLat, locationLon, stopLat, stopLon);
         image = image.substring(0, image.length() -1); //Remove the last '|'
