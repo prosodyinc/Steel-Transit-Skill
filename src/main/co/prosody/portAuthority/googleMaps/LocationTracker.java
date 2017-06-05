@@ -14,6 +14,8 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.amazon.util.OutputHelper;
+
 import co.prosody.portAuthority.InvalidInputException;
 import co.prosody.portAuthority.api.TrueTimeAPI;
 import co.prosody.portAuthority.util.JsonUtils;
@@ -47,7 +49,7 @@ public class LocationTracker {
         JSONArray results = json.getJSONArray("results");
         log.debug("JSON Results Size={}",results.length());
         if (results.length() == 0) {
-            throw new InvalidInputException("No results from JSON","I did not understand the source location");
+            throw new InvalidInputException("No results from JSON","I did not understand the source location, " + OutputHelper.LOCATION_PROMPT);
         }
         int numResultsToReturn=Math.min(limit, results.length());
         

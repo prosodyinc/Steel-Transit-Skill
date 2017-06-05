@@ -66,6 +66,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 	
 	private SkillContext skillContext;
 	private PaInputData data;
+	private InformationFetcher fetcher;
 
 	/** PUBLIC METHODS ******************************/
 	/**
@@ -135,7 +136,20 @@ public class GetNextBusSpeechlet implements Speechlet {
 			analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
 		} 
 		
-		
+		switch (request.getIntent().getName()){
+		case(DataHelper.ONE_SHOT_INTENT_NAME):
+			fetcher = new OneShotFetcher();
+			break;
+		case(DataHelper.ROUTE_INTENT_NAME):
+			fetcher = new SingleIntentFetcher();
+			break;
+		case(DataHelper.DIRECTION_INTENT_NAME):
+			fetcher = new SingleIntentFetcher();
+			break;
+		case(DataHelper.LOCATION_INTENT_NAME):
+			fetcher = new SingleIntentFetcher();
+			break;
+		}
 		
 		if (session.getAttribute(DataHelper.SKILL_CONTEXT_NAME) == null){
 			log.info("Skill Context object is null, adding one now");
@@ -205,8 +219,8 @@ public class GetNextBusSpeechlet implements Speechlet {
 				break;
 
 			case DataHelper.ONE_SHOT_INTENT_NAME:
-				// collect all the information provided by the user
 				skillContext.setAllRoutes(false);
+				// collect all the information provided by the user
 				extractRoute(session, intent);
 				extractDirection(session, intent);
 				extractLocation(session, intent);
@@ -217,19 +231,18 @@ public class GetNextBusSpeechlet implements Speechlet {
 				handleSingleIntent(session, intent);
 				break;
 			}
-			session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, skillContext);
-			session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
 		} catch (InvalidInputException e) {
 			analytics.postException(e.getMessage(), false);
 			return OutputHelper.newAskResponse(e.getSpeech(), e.getSpeech());
 		}
 
-		// if we don't have everything we need to create predictions, continue
-		// the conversation
-		SpeechletResponse furtherQuestions;
-		if ((furtherQuestions = ConversationRouter.checkForAdditionalQuestions(data, skillContext)) != null) {
-			session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, skillContext);
-			return furtherQuestions;
+		//check to see if we're missing any information
+		ConversationRouter.checkForAdditionalQuestions(data, skillContext);
+		saveAttributes(session);
+		//if there are additional questions to be asked, we need to save the attributes for the next go around of the session.
+		if (skillContext.getAdditionalQuestions()){
+			saveAttributes(session);
+			return OutputHelper.newAskResponse(skillContext.getFeedbackText() + skillContext.getLastQuestion(), skillContext.getLastQuestion());
 		} else if (log.isInfoEnabled()) {
 			logSession(session, "Returning response for:");
 		}
@@ -264,61 +277,80 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 	}
 	
-	public PaInputData loadData(String id){
-		PaInputData input = getPaDao().getPaInputData(id);
-		if (input != null && input.hasAllData()){
-			return input;
-		}
-		return null;
-	}
-	
-	public void extractRoute(Session session, Intent intent) throws InvalidInputException{
-		if (getValueFromIntentSlot(intent, DataHelper.ROUTE_ID)!=null){
-			String routeID = getValueFromIntentSlot(intent, DataHelper.ROUTE_ID);
-			// For OneShotBusIntent, this is allowed to be null.
-			if (routeID == null && !intent.getName().equals(DataHelper.ONE_SHOT_INTENT_NAME)){
-				throw new InvalidInputException("No route ID in Intent",
-						"Please repeat your bus line. " + OutputHelper.LOCATION_PROMPT);
-			} else {
-				log.info("putting value in session Slot " + DataHelper.ROUTE_ID +" : "+routeID);
-				//TODO: decide whether or not these methods should go into ConversationRouter
-				DataHelper.addRouteToConversation(data, skillContext, routeID);
-			}
-		}
-	}
-	
-	public void extractDirection(Session session, Intent intent) throws InvalidInputException{
-		if (getValueFromIntentSlot(intent, DataHelper.DIRECTION)!=null){
-			String direction = getValueFromIntentSlot(intent, DataHelper.DIRECTION);
-			if (direction == null && !intent.getName().equals(DataHelper.ONE_SHOT_INTENT_NAME)){
-				throw new InvalidInputException("No direction in Intent",
-						"Please repeat your direction. " + OutputHelper.LOCATION_PROMPT);
-			} else {
-				log.info("retreivedSlot " + DataHelper.DIRECTION+" : "+direction);
-				DataHelper.addDirectionToConversation(data, skillContext, direction);
-			}
-		}
+	/**
+	 * If the session must go on, and the user is re-prompted for more input, this method can be called to save the context and data
+	 * of the conversation, so that it persists to the next onIntent call.
+	 * @param session The current session
+	 */
+	private void saveAttributes(Session session){
+		session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, skillContext);
+		session.setAttribute(DataHelper.SESSION_OBJECT_NAME, data);
 	}
 	
 	/**
+	 * Attempt to pull a routeID value out of the user's speech, and add it to the conversation.
+	 * If successful, passes the value on to DataHelper for processing, which updates data and skillContext.
+	 * @param session The current session
+	 * @param intent The intent obtained from the user's speech
+	 * @throws InvalidInputException
+	 */
+	private void extractRoute(Session session, Intent intent) throws InvalidInputException{
+		String routeID = fetcher.getValueFromIntentSlot(intent, DataHelper.ROUTE_ID);
+		if (routeID != null){
+			log.info("putting value in session Slot " + DataHelper.ROUTE_ID +" : "+routeID);
+			DataHelper.addRouteToConversation(data, skillContext, routeID);
+		}
+		
+	}
+	
+	/**
+	 * Attempt to pull a direction value out of the user's speech, and add it to the conversation.
+	 * If successful, passes the value on to DataHelper for processing, which updates data and skillContext.
+	 * @param session The current session
+	 * @param intent The intent obtained from the user's speech
+	 * @throws InvalidInputException
+	 */
+	private void extractDirection(Session session, Intent intent) throws InvalidInputException{
+		String direction = fetcher.getValueFromIntentSlot(intent, DataHelper.DIRECTION);
+		if (direction != null){
+			log.info("retreivedSlot " + DataHelper.DIRECTION+" : "+direction);
+			DataHelper.addDirectionToConversation(data, skillContext, direction);
+		}
+		
+	}
+	
+	
+	/**
+	 * Attempt to pull a location value out of the user's speech, and add it to the conversation.
+	 * If successful, passes the value on to DataHelper for processing, which updates data and skillContext.
 	 * The location held in the intent's slot might contain an address or a
 	 * landmark or business name. DataHelper calls the Google Maps API to translate
 	 * that to a street address and put it in the data object.
+	 * @param session The current session
+	 * @param intent The intent obtained from the user's speech
+	 * @throws InvalidInputException
 	 */
-	public void extractLocation(Session session, Intent intent) throws InvalidInputException{
-		if (getValueFromIntentSlot(intent, DataHelper.DIRECTION)!=null){
-			String location = getValueFromIntentSlot(intent, DataHelper.LOCATION);
-			if (location == null && !intent.getName().equals(DataHelper.ONE_SHOT_INTENT_NAME)){
-				throw new InvalidInputException("No location in Intent",
-						"Please repeat your direction. " + OutputHelper.LOCATION_PROMPT);
-			} else {
-				log.info("putting value in session Slot " + DataHelper.LOCATION +" : "+location);
-				DataHelper.addLocationToConversation(data, skillContext, location);
-			}
-		}
+	private void extractLocation(Session session, Intent intent) throws InvalidInputException{
+		String location = fetcher.getValueFromIntentSlot(intent, DataHelper.LOCATION);
+		//fetcher will throw an exception if the location is null and the intent is a single intent,
+		//a single intenet being that the user tries to provide one piece of information (a location in this case)
+		//e.g. "Highmark"
+		if (location != null){
+			log.info("putting value in session Slot " + DataHelper.LOCATION +" : "+location);
+			DataHelper.addLocationToConversation(data, skillContext, location);
+		} 
+		
 	}
 	
-	public void handleSingleIntent(Session session, Intent intent) throws InvalidInputException {
+	/**
+	 * This method is called when the user's intent is detected to be singular,
+	 * either a route, direction, or location. Checks to make sure the intent
+	 * makes sense given the context's last question asked.
+	 * @param session The current session
+	 * @param intent The intent obtained from the user's speech
+	 * @throws InvalidInputException
+	 */
+	private void handleSingleIntent(Session session, Intent intent) throws InvalidInputException {
 		skillContext.setAllRoutes(false);
 		switch(skillContext.getLastQuestion()){
 		case OutputHelper.ROUTE_PROMPT:
@@ -358,29 +390,9 @@ public class GetNextBusSpeechlet implements Speechlet {
 		}
 	}
 	
-	
-	
 	public void onSessionEnded(SessionEndedRequest request, Session session) throws SpeechletException {
 		log.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_END);
-	}
-
-	private Stop getNearestStop(PaInputData in) throws InvalidInputException, IOException, JSONException {
-		Location c = new Location();
-		c.setAddress(in.getLocationAddress());
-		c.setLat(new Double(in.getLocationLat()).doubleValue());
-		c.setLng(new Double(in.getLocationLong()).doubleValue());
-		return GoogleMaps.findNearestStop(c, in.getRouteID(), in.getDirection());
-	}
-
-	private List<Message> getPredictions() {
-		List<Message> messages = new ArrayList<Message>();
-		if (skillContext.isAllRoutes()) {
-			messages = TrueTime.generatePredictions(data.getStopID());
-		} else {
-			messages = TrueTime.generatePredictions(data.getRouteID(), data.getStopID());
-		}
-		return messages;
 	}
 
 	private SpeechletResponse buildResponse(List<Message> messages) {
@@ -439,7 +451,43 @@ public class GetNextBusSpeechlet implements Speechlet {
 			log.info(intro + "Session:" + element + ":" + session.getAttribute(element));
 		}
 	}
+	
+	
+	//TODO: This can become independent of Amazon Speechlet
+	/**
+	 * Attempt to load the PaInputData associated with this user ID.
+	 * @param id The user ID
+	 * @return If the data exists and has all the necessary data, return it. Otherwise, return null.
+	 */
+	private PaInputData loadData(String id){
+		PaInputData input = getPaDao().getPaInputData(id);
+		if (input != null && input.hasAllData()){
+			return input;
+		}
+		return null;
+	}
+		
+	//TODO: This can become independent of Amazon Speechlet
+	private Stop getNearestStop(PaInputData in) throws InvalidInputException, IOException, JSONException {
+		Location c = new Location();
+		c.setAddress(in.getLocationAddress());
+		c.setLat(new Double(in.getLocationLat()).doubleValue());
+		c.setLng(new Double(in.getLocationLong()).doubleValue());
+		return GoogleMaps.findNearestStop(c, in.getRouteID(), in.getDirection());
+	}
 
+	//TODO: This can become independent of Amazon Speechlet
+	private List<Message> getPredictions() {
+		List<Message> messages = new ArrayList<Message>();
+		if (skillContext.isAllRoutes()) {
+			messages = TrueTime.generatePredictions(data.getStopID());
+		} else {
+			messages = TrueTime.generatePredictions(data.getRouteID(), data.getStopID());
+		}
+		return messages;
+	}
+	
+	//TODO: These can all become independent of Amazon Speechlet
 	private AmazonDynamoDBClient getAmazonDynamoDBClient() {
 		if (this.amazonDynamoDBClient == null) {
 			this.amazonDynamoDBClient = new AmazonDynamoDBClient();
@@ -465,67 +513,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 		getPaDao().savePaInput(input);
 
 	}
-	
-	
-	
-	
-	/* Moved from DataHelper */
-	
-	public static ArrayList<String> getValidIntents() {
-		// if (validIntents!=null){
-		// return validIntents;
-		// } else {
-		ArrayList<String> validIntents = new ArrayList<String>();
-		validIntents.add(DataHelper.ONE_SHOT_INTENT_NAME);
-		validIntents.add(DataHelper.RESET_INTENT_NAME);
-		validIntents.add(DataHelper.ROUTE_INTENT_NAME);
-		validIntents.add(DataHelper.LOCATION_INTENT_NAME);
-		validIntents.add(DataHelper.DIRECTION_INTENT_NAME);
-		validIntents.add("AMAZON.StopIntent");
-		validIntents.add("AMAZON.CancelIntent");
-		validIntents.add("AMAZON.HelpIntent");
-		return validIntents;
-	}
-	
-	
-	
-	public static boolean isValidIntent(String intentName) {
-		return (getValidIntents().contains(intentName));
-	}
-
-	public static String getValueFromIntentSlot(Intent intent, String name) {
-		log.trace("getValueFromIntentSlot" + intent.getName());
-		Slot slot = intent.getSlot(name);
-		if (slot == null) {
-			log.error("Cannot get Slot={} for Intent={} ", name, intent.getName());
-			// if we can't return the requested slot from this intent
-			// return the default slot for the intent
-			slot = intent.getSlot(getSlotNameForIntentName(intent.getName()));
-		}
-		return (slot != null) ? slot.getValue() : null;
-	}
-
-	private static String getSlotNameForIntentName(String intentName) {
-		if (intentName == null) {
-			return null;
-		}
-
-		String output = null;
-		switch (intentName) {
-		case DataHelper.ROUTE_INTENT_NAME:
-			output = DataHelper.ROUTE_ID;
-			break;
-		case DataHelper.LOCATION_INTENT_NAME:
-			output = DataHelper.LOCATION;
-			break;
-		case DataHelper.DIRECTION_INTENT_NAME:
-			output = DataHelper.DIRECTION;
-			break;
-		}
-		return output;
-	}
-	
-	
 	
 }
 

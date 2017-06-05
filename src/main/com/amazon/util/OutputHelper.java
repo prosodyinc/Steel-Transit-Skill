@@ -97,7 +97,13 @@ public class OutputHelper {
 	 * Speech fragment for additional prediction result
 	 * Format with Prediction Time
 	 */
-	private static final String MORE_RESULTS_SPEECH=" and %s minutes ";
+	private static final String MORE_RESULTS_SPEECH=", %s minutes ";
+	
+	/**
+	 * Speech fragment for additional prediction result
+	 * Format with Prediction Time
+	 */
+	private static final String FINAL_RESULTS_SPEECH=", and %s minutes ";
 	
 	/**
 	 * Speech fragment with instructions to hear all routes.
@@ -165,18 +171,19 @@ public class OutputHelper {
 
 	public static SpeechletResponse getResponse(PaInputData inputData, ArrayList<Result> results, SkillContext c) {	
 		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
-		String textOutput;
+		//String textOutput = c.getFeedbackText();
+		String textOutput = "";
 		String speechOutput;
 
 		//final String locationOutput="The nearest stop to "+  inputData.getLocationName() +" is " + inputData.getStopName()+". ";
 		//final String stopOutput=" At " +inputData.getStopName()+", ";
 		//final String allRoutesHelpText=" <break time=\"0.25s\" />  to hear predictions for all routes that stop "+BUSSTOP_SPEECH+  ", say <break time=\"0.25s\" /> Alexa, ask "+GetNextBusSpeechlet.INVOCATION_NAME+" for All Routes";
 
-
+		
 		if (c.getNeedsLocation()){
-			textOutput=String.format(LOCATION_SPEECH, inputData.getLocationName(), inputData.getStopName());
+			textOutput+=String.format(LOCATION_SPEECH, inputData.getLocationName(), inputData.getStopName());
 		} else {
-			textOutput=String.format(BUSSTOP_SPEECH, inputData.getStopName()) ;
+			textOutput+=String.format(BUSSTOP_SPEECH, inputData.getStopName()) ;
 		}
 		speechOutput = textOutput+"<break time=\"0.1s\" />";
 
@@ -195,9 +202,17 @@ public class OutputHelper {
 			if (i==0){
 				textOutput += String.format(FIRST_RESULT_SPEECH,routeID,when);
 				speechOutput += String.format(FIRST_RESULT_SPEECH,routeID,when);
+			} else if (i == results.size() - 1){
+				textOutput += String.format(FINAL_RESULTS_SPEECH, when);
+				speechOutput += String.format(FINAL_RESULTS_SPEECH, when);
 			} else if (routeID.equals(prevRouteID)){
-				textOutput += String.format(MORE_RESULTS_SPEECH, when);
-				speechOutput += String.format(MORE_RESULTS_SPEECH, when);
+				if (i < results.size() - 1 && !results.get(i + 1).getRoute().equals(routeID)){
+					textOutput += String.format(FINAL_RESULTS_SPEECH, when);
+					speechOutput += String.format(FINAL_RESULTS_SPEECH, when);
+				} else {
+					textOutput += String.format(MORE_RESULTS_SPEECH, when);
+					speechOutput += String.format(MORE_RESULTS_SPEECH, when);
+				}
 			} else {
 				textOutput += ".\n "+String.format(FIRST_RESULT_SPEECH,routeID,when);
 				speechOutput += "<break time=\"0.25s\" /> "+String.format(FIRST_RESULT_SPEECH,routeID,when);
