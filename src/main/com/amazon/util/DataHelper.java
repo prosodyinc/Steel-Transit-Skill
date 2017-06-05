@@ -118,7 +118,7 @@ public class DataHelper {
 					"Could not find the bus line " + routeID + "." + OutputHelper.ROUTE_PROMPT);
 		}
 
-		skillContext.setFeedbackText(route.getId() + "," + route.getName() + ", ");
+		skillContext.addFeedbackText(route.getId() + "," + route.getName() + ", ");
 
 	}
 	

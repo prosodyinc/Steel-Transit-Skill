@@ -238,7 +238,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 		//check to see if we're missing any information
 		ConversationRouter.checkForAdditionalQuestions(data, skillContext);
-		
+		saveAttributes(session);
 		//if there are additional questions to be asked, we need to save the attributes for the next go around of the session.
 		if (skillContext.getAdditionalQuestions()){
 			saveAttributes(session);
@@ -332,10 +332,13 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 */
 	private void extractLocation(Session session, Intent intent) throws InvalidInputException{
 		String location = fetcher.getValueFromIntentSlot(intent, DataHelper.LOCATION);
+		//fetcher will throw an exception if the location is null and the intent is a single intent,
+		//a single intenet being that the user tries to provide one piece of information (a location in this case)
+		//e.g. "Highmark"
 		if (location != null){
 			log.info("putting value in session Slot " + DataHelper.LOCATION +" : "+location);
 			DataHelper.addLocationToConversation(data, skillContext, location);
-		}
+		} 
 		
 	}
 	

@@ -25,6 +25,7 @@ class SingleIntentFetcher extends InformationFetcher {
 	public String getValueFromIntentSlot(Intent intent, String name) throws InvalidInputException {
 		Slot slot = intent.getSlot(name);
 		if (slot == null) {
+			//if the slot doesn't exist for this intent, check the intent's name
 			slot = intent.getSlot(getSlotNameForIntentName(intent.getName()));
 		}
 		if (slot == null){
