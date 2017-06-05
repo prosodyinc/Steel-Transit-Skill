@@ -26,9 +26,12 @@ import com.amazon.speech.speechlet.SessionStartedRequest;
 import com.amazon.speech.speechlet.Speechlet;
 import com.amazon.speech.speechlet.SpeechletException;
 import com.amazon.speech.speechlet.SpeechletResponse;
+import com.amazon.speech.ui.Card;
+import com.amazon.speech.ui.Image;
 import com.amazon.speech.ui.OutputSpeech;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.SsmlOutputSpeech;
+import com.amazon.speech.ui.StandardCard;
 import com.amazon.util.ConversationRouter;
 import com.amazon.util.DataHelper;
 import com.amazon.util.OutputHelper;
@@ -92,7 +95,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		} else {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Welcome");
 			//by default, the lastQuestion of skill context is Route_prompt
-			return OutputHelper.getWelcomeResponse();
+			return getWelcomeResponse();
 		}
 		
 		
@@ -177,11 +180,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 			analytics.postEvent(AnalyticsManager.CATEGORY_INTENT, intent.getName());
 			switch (intent.getName()) {
 			case "AMAZON.StopIntent":
-				return OutputHelper.getStopResponse();
+				return getStopResponse();
 			case "AMAZON.CancelIntent":
-				return OutputHelper.getStopResponse();
+				return getStopResponse();
 			case "AMAZON.HelpIntent":
-				return OutputHelper.getHelpResponse();
+				return getHelpResponse();
 
 			case DataHelper.RESET_INTENT_NAME:
 				// Delete current record for this user
@@ -233,7 +236,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			}
 		} catch (InvalidInputException e) {
 			analytics.postException(e.getMessage(), false);
-			return OutputHelper.newAskResponse(e.getSpeech(), e.getSpeech());
+			return newAskResponse(e.getSpeech(), e.getSpeech());
 		}
 
 		//check to see if we're missing any information
@@ -242,7 +245,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		//if there are additional questions to be asked, we need to save the attributes for the next go around of the session.
 		if (skillContext.getAdditionalQuestions()){
 			saveAttributes(session);
-			return OutputHelper.newAskResponse(skillContext.getFeedbackText() + skillContext.getLastQuestion(), skillContext.getLastQuestion());
+			return newAskResponse(skillContext.getFeedbackText() + skillContext.getLastQuestion(), skillContext.getLastQuestion());
 		} else if (log.isInfoEnabled()) {
 			logSession(session, "Returning response for:");
 		}
@@ -264,7 +267,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		} catch (InvalidInputException | IOException | JSONException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return OutputHelper.getFailureResponse("Google Maps");
+			return getFailureResponse("Google Maps");
 			
 		} finally {
 			//saveInputToDB(inputData);
@@ -395,12 +398,59 @@ public class GetNextBusSpeechlet implements Speechlet {
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_END);
 	}
 
+	
+	/* From OutputHelper */
+	/**
+	 * Wrapper for creating the Ask response from the input strings.
+
+	 * @param stringOutput
+	 *            the output to be spoken
+	 * @param repromptText
+	 *            the reprompt for if the user doesn't reply or is
+	 *            misunderstood.
+	 * @return SpeechletResponse the speechlet response
+	 */
+	public static SpeechletResponse newAskResponse(String stringOutput, String repromptText) {
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		outputSpeech.setSsml("<speak> " + stringOutput + " </speak>");
+
+		PlainTextOutputSpeech repromptOutputSpeech = new PlainTextOutputSpeech();
+		repromptOutputSpeech.setText(repromptText);
+		Reprompt reprompt = new Reprompt();
+		reprompt.setOutputSpeech(repromptOutputSpeech);
+		return SpeechletResponse.newAskResponse(outputSpeech, reprompt);
+	}
+	
+	/* From OutputHelper */
+	public static SpeechletResponse newTellResponse(String message) {
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		outputSpeech.setSsml("<speak> " + message + " </speak>");
+		return SpeechletResponse.newTellResponse(outputSpeech);
+	}
+	
+	public static SpeechletResponse getWelcomeResponse(){
+		String output=OutputHelper.AUDIO_WELCOME+" "+OutputHelper.SPEECH_WELCOME + OutputHelper.ROUTE_PROMPT;
+		
+		return newAskResponse(output, OutputHelper.ROUTE_PROMPT);
+	}
+	
+	public static SpeechletResponse getHelpResponse(){
+		String output=OutputHelper.AUDIO_WELCOME+" "+OutputHelper.HELP_SPEECH + " " + OutputHelper.ROUTE_PROMPT;
+		
+		return newAskResponse(output, OutputHelper.ROUTE_PROMPT);
+	}
+	
+	public static SpeechletResponse getStopResponse(){
+		
+		return newTellResponse(OutputHelper.STOP_SPEECH);
+	}
+	
 	private SpeechletResponse buildResponse(List<Message> messages) {
 		SpeechletResponse output;
 		try {
 			if (messages.size() == 0) {
 				log.info("No Messages");
-				output = OutputHelper.getNoResponse(data, skillContext);
+				output = getNoResponse(data, skillContext);
 				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "No Result", "Null", messages.size());
 				return output;
 			}
@@ -409,7 +459,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 				log.error("1 error message:" + messages.get(0) + ":" + messages.get(0).getError());
 				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "No Result", messages.get(0).getError(),
 						messages.size());
-				return OutputHelper.getNoResponse(data, skillContext);
+				return getNoResponse(data, skillContext);
 
 			}
 
@@ -426,7 +476,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 						data.getRouteName() + " at " + data.getStopName(), messages.size());
 			}
 			
-			return OutputHelper.getResponse(data, results, skillContext);
+			return getResponse(data, results, skillContext);
 
 		} catch (Exception e) {
 			analytics.postException(e.getMessage(), true);
@@ -435,7 +485,61 @@ public class GetNextBusSpeechlet implements Speechlet {
 		return null;
 	}
 
+	public static SpeechletResponse getNoResponse(PaInputData inputData, SkillContext c) {
+		SsmlOutputSpeech outputSpeech=new SsmlOutputSpeech();
+		String output = OutputHelper.getNoResponse(inputData, c);
+		
+		outputSpeech.setSsml("<speak> " + OutputHelper.AUDIO_FAILURE + output + "</speak>");
+		return SpeechletResponse.newTellResponse(outputSpeech, buildCard(output));
 
+	}
+	
+	public static SpeechletResponse getResponse(PaInputData inputData, ArrayList<Result> results, SkillContext c) {	
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		String [] output = OutputHelper.getResponse(inputData, results, c);
+		String textOutput = output[0];
+		String speechOutput = output[1];
+		outputSpeech.setSsml("<speak> " + OutputHelper.AUDIO_SUCCESS + speechOutput + "</speak>");
+		Card card;
+		
+		try {
+			card = buildCard(textOutput, inputData.getLocationLat(), inputData.getLocationLong(), inputData.getStopLat(), inputData.getStopLon());
+		} catch (Exception e) {
+			log.error(e.getMessage());
+			card= buildCard(textOutput);
+		}
+		
+		return SpeechletResponse.newTellResponse(outputSpeech, card);
+	}
+
+	public static SpeechletResponse getFailureResponse(String failureLabel) {
+		String message = OutputHelper.getFailureResponse(failureLabel);
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		outputSpeech.setSsml("<speak> " + message + " </speak>");
+		return SpeechletResponse.newTellResponse(outputSpeech);
+	}
+	
+	//card for error output
+		private static SimpleCard buildCard(String s){
+			SimpleCard card=new SimpleCard();
+			card.setTitle(GetNextBusSpeechlet.INVOCATION_NAME);
+			card.setContent(s);
+			return card;
+		}
+	        //card with image for successful output
+		private static StandardCard buildCard(String text, String locationLat, String locationLong, double stopLat, double stopLon) throws IOException, JSONException, Exception {
+	            StandardCard card = new StandardCard();
+	            Navigation navigation = OutputHelper.buildNavigation(locationLat, locationLong, stopLat, stopLon);
+	            card.setTitle(GetNextBusSpeechlet.INVOCATION_NAME);
+	            card.setText(text+"\n"+navigation.getInstructions());
+	            Image image = new Image();
+	            image.setLargeImageUrl(navigation.getImage());
+	            log.info("LARGE IMAGE URL: "+navigation.getImage());
+	            card.setImage(image);
+	            return card;
+	        }
+	
+	
 	/**
 	 * Helper method to log the data currently stored in session.
 	 * 
