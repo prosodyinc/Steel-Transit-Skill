@@ -8,24 +8,11 @@ import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.amazon.speech.speechlet.SpeechletResponse;
-import com.amazon.speech.ui.Card;
-import com.amazon.speech.ui.Image;
-import com.amazon.speech.ui.PlainTextOutputSpeech;
-import com.amazon.speech.ui.Reprompt;
-import com.amazon.speech.ui.SimpleCard;
-import com.amazon.speech.ui.SsmlOutputSpeech;
-import com.amazon.speech.ui.StandardCard;
-
 import co.prosody.portAuthority.GetNextBusSpeechlet;
 import co.prosody.portAuthority.googleMaps.GoogleMaps;
-import co.prosody.portAuthority.googleMaps.Instructions;
-import co.prosody.portAuthority.googleMaps.NearestStopLocator;
 import co.prosody.portAuthority.storage.PaInputData;
 import co.prosody.portAuthority.util.Navigation;
 import co.prosody.portAuthority.util.Result;
-
-import org.json.JSONObject;
 
 
 public class OutputHelper {
@@ -115,30 +102,30 @@ public class OutputHelper {
 	 */
 	public static final String HELP_SPEECH=GetNextBusSpeechlet.INVOCATION_NAME+" will tell you when the next bus is coming if you provide it a bus line, direction, and location near your bus stop.";
 	/**
-	 * Speech fragment for stopping or cancelling.
+	 * Speech fragment for stopping or canceling.
 	 */
 	public static final String STOP_SPEECH="Oh? OK";
-
-
-	//	public static SpeechletResponse getNoResponse(PaInputData inputData) {
-	//		return getNoResponse(inputData, "");
-	//	}
-
 	
 
-	public static String getNoResponse(PaInputData inputData, SkillContext c) {
+	/**
+	 * Returns a String response that indicates there are no buses (or no particular bus) arriving at the given stop within the next 30 minutes.
+	 * @param inputData The data object of the conversation
+	 * @param skillContext The context of the conversation
+	 * @return The response indicating no buses are due to arrive
+	 */
+	public static String getNoResponse(PaInputData inputData, SkillContext skillContext) {
 		String textOutput="";
-		if (c.getNeedsLocation()){
+		if (skillContext.getNeedsLocation()){
 			textOutput=String.format(LOCATION_SPEECH, inputData.getLocationName(), inputData.getStopName()); 
 		}
 
-		if (c.isAllRoutes()){
+		if (skillContext.isAllRoutes()){
 			textOutput+=String.format(NO_ALL_ROUTES_SPEECH, inputData.getDirection(), inputData.getStopName());
 		} else {
 			textOutput+=String.format(NO_SINGLE_ROUTE_SPEECH, inputData.getDirection(), inputData.getRouteID() , inputData.getStopName());
 		}
 
-		if ((c.getNeedsMoreHelp())&&(!c.isAllRoutes())){
+		if ((skillContext.getNeedsMoreHelp())&&(!skillContext.isAllRoutes())){
 			textOutput+=HELP_ALL_ROUTES_SPEECH;
 			
 		}
@@ -147,21 +134,21 @@ public class OutputHelper {
 
 	}
 
-	//	public static SpeechletResponse getResponse(PaInputData inputData, ArrayList<Result> results) {	
-	//		return getResponse(inputData, results, "");
-	//	}
-
-	public static String[] getResponse(PaInputData inputData, ArrayList<Result> results, SkillContext c) {	
+	/**
+	 * Lists off each bus arriving at a given stop.
+	 * Builds a response given a list of bus routes and times arriving at a particular stop. 
+	 * Formats the response so that the times for each bus route arriving at this stop are listed off.
+	 * @param inputData The data object of the conversation
+	 * @param results The route number and estimated time of each bus arriving at this stop in the next 30 minutes.
+	 * @param skillContext The context of the conversation
+	 * @return SSML speechOutput and a regular text output, returned in array 
+	 */
+	public static String[] generateResponse(PaInputData inputData, ArrayList<Result> results, SkillContext skillContext) {	
 		String[] output = new String[2];
 		String textOutput = "";
 		String speechOutput;
 
-		//final String locationOutput="The nearest stop to "+  inputData.getLocationName() +" is " + inputData.getStopName()+". ";
-		//final String stopOutput=" At " +inputData.getStopName()+", ";
-		//final String allRoutesHelpText=" <break time=\"0.25s\" />  to hear predictions for all routes that stop "+BUSSTOP_SPEECH+  ", say <break time=\"0.25s\" /> Alexa, ask "+GetNextBusSpeechlet.INVOCATION_NAME+" for All Routes";
-
-		
-		if (c.getNeedsLocation()){
+		if (skillContext.getNeedsLocation()){
 			textOutput+=String.format(LOCATION_SPEECH, inputData.getLocationName(), inputData.getStopName());
 		} else {
 			textOutput+=String.format(BUSSTOP_SPEECH, inputData.getStopName()) ;
@@ -206,7 +193,18 @@ public class OutputHelper {
 		//TODO: maybe the skill context should get these values, instead of having them returned...
 	}
         
-	
+	/**
+	 * Uploads a picture of the closest path from the location provided by the user to the nearest bus stop.
+	 * Uploaded to an S3 bucket.
+	 * @param locationLat The latitude of the user's location
+	 * @param locationLon The longitude of the user's location
+	 * @param stopLat The latitude of the nearest stop
+	 * @param stopLon The longitude of the nearest stop
+	 * @return A navigation object containing the image URL and directions from the user's location to the nearest stop
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws Exception
+	 */
     public static Navigation buildNavigation(String locationLat, String locationLon, double stopLat, double stopLon) throws IOException, JSONException, Exception{	
     	Navigation navigation = new Navigation();
         
@@ -231,7 +229,12 @@ public class OutputHelper {
         return navigation;
     }
 
-	public static String getFailureResponse(String failureLabel) {
+    /**
+     * Returns a response that indicates there has been an issue connecting to one of the APIs
+     * @param failureLabel The API that couldn't establish connection
+     * @return The failure reponse
+     */
+	public static String getAPIFailureResponse(String failureLabel) {
 		String message = ("There has been a problem connecting to " + failureLabel + ". I'll let the developers know."); 
 		return message;
 	}
