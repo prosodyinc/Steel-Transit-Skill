@@ -3,12 +3,14 @@ package com.amazon.util;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 
 import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import co.prosody.portAuthority.GetNextBusSpeechlet;
+import co.prosody.portAuthority.api.Message;
 import co.prosody.portAuthority.googleMaps.GoogleMaps;
 import co.prosody.portAuthority.storage.PaInputData;
 import co.prosody.portAuthority.util.Navigation;
@@ -229,6 +231,29 @@ public class OutputHelper {
         return navigation;
     }
 
+    /**
+     * Extracts relevant routeID and ETA information from the Messages returned by the TrueTimeAPI.
+     * If there are no Messages, or there is an error message, return null.
+     * @param messages The Messages returned by the TrueTime API
+     * @param skillContext The conversation context
+     * @return A List of Results
+     */
+    public static ArrayList<Result> getResults(List<Message> messages){
+    	
+		if (messages.size() == 0 || messages.get(0).getMessageType().equals(Message.ERROR)){
+    		return null;
+    	}
+
+		ArrayList<Result> results = new ArrayList<Result>();
+		for (int i = 0; i < messages.size(); i++) {
+			results.add(new Result(messages.get(i).getRouteID(), messages.get(i).getEstimate()));
+		}
+		return results;
+
+		
+    }
+    
+    
     /**
      * Returns a response that indicates there has been an issue connecting to one of the APIs
      * @param failureLabel The API that couldn't establish connection

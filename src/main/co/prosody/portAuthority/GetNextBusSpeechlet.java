@@ -264,7 +264,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 				saveInputToDB(data);
 			}
 		} catch (InvalidInputException | IOException | JSONException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 			return getFailureResponse("Google Maps");
 			
@@ -479,6 +478,31 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 * @param messages
 	 * @return SpeechletResponse A response indicating the arrival times for buses coming to the user defined stop.
 	 */
+	
+	private SpeechletResponse buildResponse(List<Message> messages) {
+		ArrayList<Result> results = null;
+		try {
+			results= OutputHelper.getResults(messages);
+		} catch (Exception e){
+			analytics.postException(e.getMessage(), true);
+			e.printStackTrace();
+		}
+		
+		if (results != null){
+			if (skillContext.isAllRoutes()) {
+				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "Success",
+						"All routes at " + data.getStopName(), messages.size());
+			} else {
+				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "Success",
+						data.getRouteName() + " at " + data.getStopName(), messages.size());
+			}
+			return readResults(results);
+		} else {
+			return getNoResponse();
+		}
+	}
+	
+	/*
 	private SpeechletResponse buildResponse(List<Message> messages) {
 		SpeechletResponse output;
 		try {
@@ -516,7 +540,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			e.printStackTrace();
 		}
 		return null;
-	}
+	}*/
 	
 	/**
 	 * Given a list of results (routeIDs and ETAs), create a response listing off information for
@@ -542,6 +566,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 		return SpeechletResponse.newTellResponse(outputSpeech, card);
 	}
 
+	/**
+	 * Creates a response that indicates a failure occurred.
+	 * @param failureLabel The failure message
+	 * @return SpeechletResponse the failure response
+	 */
 	public static SpeechletResponse getFailureResponse(String failureLabel) {
 		String message = OutputHelper.getAPIFailureResponse(failureLabel);
 		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
@@ -550,6 +579,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 	}
 	
 	//card for error output
+	/**
+	 * Creates a card that indicates an error occurred.
+	 * @param s The failure message
+	 * @return SimpleCard a failure card
+	 */
 	public SimpleCard buildCard(String s){
 		SimpleCard card=new SimpleCard();
 		card.setTitle(GetNextBusSpeechlet.INVOCATION_NAME);
@@ -557,6 +591,20 @@ public class GetNextBusSpeechlet implements Speechlet {
 		return card;
 	}
         //card with image for successful output
+	
+	/**
+	 * Creates a card that indicates route information was successfully gathered.
+	 * Includes a picture of a directions from the user's location to the nearest stop.
+	 * @param text List of buses and prediction times arriving at this stop
+	 * @param locationLat The latitude of the location provided by the user
+	 * @param locationLong The longitude of the location provided by the user
+	 * @param stopLat The latitude of the stop
+	 * @param stopLon The longitude of the stop
+	 * @return StandardCard A card indicating success
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws Exception
+	 */
 	public StandardCard buildCard(String text, String locationLat, String locationLong, double stopLat, double stopLon) throws IOException, JSONException, Exception {
             StandardCard card = new StandardCard();
             Navigation navigation = OutputHelper.buildNavigation(locationLat, locationLong, stopLat, stopLon);
@@ -602,6 +650,14 @@ public class GetNextBusSpeechlet implements Speechlet {
 	}
 		
 	//TODO: This can become independent of Amazon Speechlet
+	/**
+	 * Helper method that takes location data from the data object and passes it along to the Google Maps API.
+	 * @param in The conversation data object
+	 * @return The nearest stop to the location given by the user in the conversation
+	 * @throws InvalidInputException
+	 * @throws IOException
+	 * @throws JSONException
+	 */
 	private Stop getNearestStop(PaInputData in) throws InvalidInputException, IOException, JSONException {
 		Location c = new Location();
 		c.setAddress(in.getLocationAddress());
@@ -611,6 +667,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 	}
 
 	//TODO: This can become independent of Amazon Speechlet
+	/**
+	 * Helper method that makes a call to the TrueTime API to obtain predictions for all buses (or one particular bus, depending on the skill context)
+	 * arriving at a given stop.
+	 * @return Predictions of buses arriving at the stop (that was found during the conversation)
+	 */
 	private List<Message> getPredictions() {
 		List<Message> messages = new ArrayList<Message>();
 		if (skillContext.isAllRoutes()) {
