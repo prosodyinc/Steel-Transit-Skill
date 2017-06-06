@@ -26,9 +26,12 @@ import com.amazon.speech.speechlet.SessionStartedRequest;
 import com.amazon.speech.speechlet.Speechlet;
 import com.amazon.speech.speechlet.SpeechletException;
 import com.amazon.speech.speechlet.SpeechletResponse;
+import com.amazon.speech.ui.Card;
+import com.amazon.speech.ui.Image;
 import com.amazon.speech.ui.OutputSpeech;
 import com.amazon.speech.ui.PlainTextOutputSpeech;
 import com.amazon.speech.ui.SsmlOutputSpeech;
+import com.amazon.speech.ui.StandardCard;
 import com.amazon.util.ConversationRouter;
 import com.amazon.util.DataHelper;
 import com.amazon.util.OutputHelper;
@@ -92,7 +95,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		} else {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Welcome");
 			//by default, the lastQuestion of skill context is Route_prompt
-			return OutputHelper.getWelcomeResponse();
+			return getWelcomeResponse();
 		}
 		
 		
@@ -100,7 +103,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 
 	/**
 	 * Called when an intent is first received, before handing to onIntent.
-	 * Establishes which
 	 */
 	public void onSessionStarted(SessionStartedRequest request, Session session) throws SpeechletException {
 		log.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
@@ -177,11 +179,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 			analytics.postEvent(AnalyticsManager.CATEGORY_INTENT, intent.getName());
 			switch (intent.getName()) {
 			case "AMAZON.StopIntent":
-				return OutputHelper.getStopResponse();
+				return getStopResponse();
 			case "AMAZON.CancelIntent":
-				return OutputHelper.getStopResponse();
+				return getStopResponse();
 			case "AMAZON.HelpIntent":
-				return OutputHelper.getHelpResponse();
+				return getHelpResponse();
 
 			case DataHelper.RESET_INTENT_NAME:
 				// Delete current record for this user
@@ -233,7 +235,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 			}
 		} catch (InvalidInputException e) {
 			analytics.postException(e.getMessage(), false);
-			return OutputHelper.newAskResponse(e.getSpeech(), e.getSpeech());
+			return newAskResponse(e.getSpeech(), e.getSpeech());
 		}
 
 		//check to see if we're missing any information
@@ -242,7 +244,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		//if there are additional questions to be asked, we need to save the attributes for the next go around of the session.
 		if (skillContext.getAdditionalQuestions()){
 			saveAttributes(session);
-			return OutputHelper.newAskResponse(skillContext.getFeedbackText() + skillContext.getLastQuestion(), skillContext.getLastQuestion());
+			return newAskResponse(skillContext.getFeedbackText() + skillContext.getLastQuestion(), skillContext.getLastQuestion());
 		} else if (log.isInfoEnabled()) {
 			logSession(session, "Returning response for:");
 		}
@@ -262,9 +264,8 @@ public class GetNextBusSpeechlet implements Speechlet {
 				saveInputToDB(data);
 			}
 		} catch (InvalidInputException | IOException | JSONException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return OutputHelper.getFailureResponse("Google Maps");
+			return getFailureResponse("Google Maps");
 			
 		} finally {
 			//saveInputToDB(inputData);
@@ -395,12 +396,119 @@ public class GetNextBusSpeechlet implements Speechlet {
 		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_END);
 	}
 
+	
+	
+	/**
+	 * Wrapper for creating the Ask response from the input strings.
+
+	 * @param stringOutput
+	 *            the output to be spoken
+	 * @param repromptText
+	 *            the reprompt for if the user doesn't reply or is
+	 *            misunderstood.
+	 * @return SpeechletResponse the speechlet response
+	 */
+	private static SpeechletResponse newAskResponse(String stringOutput, String repromptText) {
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		outputSpeech.setSsml("<speak> " + stringOutput + " </speak>");
+
+		PlainTextOutputSpeech repromptOutputSpeech = new PlainTextOutputSpeech();
+		repromptOutputSpeech.setText(repromptText);
+		Reprompt reprompt = new Reprompt();
+		reprompt.setOutputSpeech(repromptOutputSpeech);
+		return SpeechletResponse.newAskResponse(outputSpeech, reprompt);
+	}
+	
+	/**
+	 * Wrapper for creating the Ask tell from the input string.
+
+	 * @param message
+	 *            the output to be spoken
+	 * @return SpeechletResponse the speechlet response
+	 */
+	private static SpeechletResponse newTellResponse(String message) {
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		outputSpeech.setSsml("<speak> " + message + " </speak>");
+		return SpeechletResponse.newTellResponse(outputSpeech);
+	}
+	
+	/**
+	 * Creates a welcome response and then prompts the user for a route.
+	 * @return SpeechletResponse a welcome response
+	 */
+	private static SpeechletResponse getWelcomeResponse(){
+		String output=OutputHelper.AUDIO_WELCOME+" "+OutputHelper.SPEECH_WELCOME + OutputHelper.ROUTE_PROMPT;
+		return newAskResponse(output, OutputHelper.ROUTE_PROMPT);
+	}
+	
+	/**
+	 * Creates a response that is designed to help the user understand how to use the app, and then prompts the user for a route.
+	 * @return SpeechletResponse a help response
+	 */
+	private static SpeechletResponse getHelpResponse(){
+		String output=OutputHelper.AUDIO_WELCOME+" "+OutputHelper.HELP_SPEECH + " " + OutputHelper.ROUTE_PROMPT;
+		return newAskResponse(output, OutputHelper.ROUTE_PROMPT);
+	}
+	
+	/**
+	 * Creates a response for when the user ends the session abruptly (i.e "Alexa, stop")
+	 * @return SpeechletResponse a stop response
+	 */
+	private static SpeechletResponse getStopResponse(){
+		return newTellResponse(OutputHelper.STOP_SPEECH);
+	}
+	
+	/**
+	 * Creates a response indicating that there are no buses (or no particular bus) arriving at 
+	 * the user defined stop within the next 30 minutes.
+	 * @return SpeechletResponse a failure response
+	 */
+	private SpeechletResponse getNoResponse() {
+		SsmlOutputSpeech outputSpeech=new SsmlOutputSpeech();
+		String output = OutputHelper.getNoResponse(data, skillContext);
+		outputSpeech.setSsml("<speak> " + OutputHelper.AUDIO_FAILURE + output + "</speak>");
+		return SpeechletResponse.newTellResponse(outputSpeech, buildCard(output));
+	}
+	
+	//TODO: A lot of this logic could be separated from the Speechlet.
+	/**
+	 * Given a list of messages (TrueTimeAPI values) that are obtained by making calls to the TrueTime API, 
+	 * attempt to extract the route ID and ETA of each message and create a response with them by passing these values to readResults. 
+	 * If there are 0 messages or 1 message that is an error message, call getNoResponse to indicate failure.
+	 * @param messages
+	 * @return SpeechletResponse A response indicating the arrival times for buses coming to the user defined stop.
+	 */
+	
+	private SpeechletResponse buildResponse(List<Message> messages) {
+		ArrayList<Result> results = null;
+		try {
+			results= OutputHelper.getResults(messages);
+		} catch (Exception e){
+			analytics.postException(e.getMessage(), true);
+			e.printStackTrace();
+		}
+		
+		if (results != null){
+			if (skillContext.isAllRoutes()) {
+				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "Success",
+						"All routes at " + data.getStopName(), messages.size());
+			} else {
+				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "Success",
+						data.getRouteName() + " at " + data.getStopName(), messages.size());
+			}
+			return readResults(results);
+		} else {
+			return getNoResponse();
+		}
+	}
+	
+	/*
 	private SpeechletResponse buildResponse(List<Message> messages) {
 		SpeechletResponse output;
 		try {
 			if (messages.size() == 0) {
 				log.info("No Messages");
-				output = OutputHelper.getNoResponse(data, skillContext);
+				output = getNoResponse();
 				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "No Result", "Null", messages.size());
 				return output;
 			}
@@ -409,8 +517,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 				log.error("1 error message:" + messages.get(0) + ":" + messages.get(0).getError());
 				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "No Result", messages.get(0).getError(),
 						messages.size());
-				return OutputHelper.getNoResponse(data, skillContext);
-
+				return getNoResponse();
 			}
 
 			ArrayList<Result> results = new ArrayList<Result>();
@@ -426,16 +533,91 @@ public class GetNextBusSpeechlet implements Speechlet {
 						data.getRouteName() + " at " + data.getStopName(), messages.size());
 			}
 			
-			return OutputHelper.getResponse(data, results, skillContext);
+			return readResults(results);
 
 		} catch (Exception e) {
 			analytics.postException(e.getMessage(), true);
 			e.printStackTrace();
 		}
 		return null;
+	}*/
+	
+	/**
+	 * Given a list of results (routeIDs and ETAs), create a response listing off information for
+	 * each route arriving at the user defined stop. The actual formatting of the response takes place
+	 * in generateResponse of OutputHelper.
+	 * @param results The list of results
+	 * @return SpeechletResponse A response of arrival information for the user defined stop
+	 */
+	public SpeechletResponse readResults(ArrayList<Result> results) {	
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		String [] output = OutputHelper.generateResponse(data, results, skillContext);
+		String textOutput = output[0];
+		String speechOutput = output[1];
+		outputSpeech.setSsml("<speak> " + OutputHelper.AUDIO_SUCCESS + speechOutput + "</speak>");
+		Card card;
+		
+		try {
+			card = buildCard(textOutput, data.getLocationLat(), data.getLocationLong(), data.getStopLat(), data.getStopLon());
+		} catch (Exception e) {
+			log.error(e.getMessage());
+			card= buildCard(textOutput);
+		}
+		return SpeechletResponse.newTellResponse(outputSpeech, card);
 	}
 
-
+	/**
+	 * Creates a response that indicates a failure occurred.
+	 * @param failureLabel The failure message
+	 * @return SpeechletResponse the failure response
+	 */
+	public static SpeechletResponse getFailureResponse(String failureLabel) {
+		String message = OutputHelper.getAPIFailureResponse(failureLabel);
+		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
+		outputSpeech.setSsml("<speak> " + message + " </speak>");
+		return SpeechletResponse.newTellResponse(outputSpeech);
+	}
+	
+	//card for error output
+	/**
+	 * Creates a card that indicates an error occurred.
+	 * @param s The failure message
+	 * @return SimpleCard a failure card
+	 */
+	public SimpleCard buildCard(String s){
+		SimpleCard card=new SimpleCard();
+		card.setTitle(GetNextBusSpeechlet.INVOCATION_NAME);
+		card.setContent(s);
+		return card;
+	}
+        //card with image for successful output
+	
+	/**
+	 * Creates a card that indicates route information was successfully gathered.
+	 * Includes a picture of a directions from the user's location to the nearest stop.
+	 * @param text List of buses and prediction times arriving at this stop
+	 * @param locationLat The latitude of the location provided by the user
+	 * @param locationLong The longitude of the location provided by the user
+	 * @param stopLat The latitude of the stop
+	 * @param stopLon The longitude of the stop
+	 * @return StandardCard A card indicating success
+	 * @throws IOException
+	 * @throws JSONException
+	 * @throws Exception
+	 */
+	public StandardCard buildCard(String text, String locationLat, String locationLong, double stopLat, double stopLon) throws IOException, JSONException, Exception {
+            StandardCard card = new StandardCard();
+            Navigation navigation = OutputHelper.buildNavigation(locationLat, locationLong, stopLat, stopLon);
+            card.setTitle(GetNextBusSpeechlet.INVOCATION_NAME);
+            card.setText(text+"\n"+navigation.getInstructions());
+            Image image = new Image();
+            image.setLargeImageUrl(navigation.getImage());
+            log.info("LARGE IMAGE URL: "+navigation.getImage());
+            card.setImage(image);
+            return card;
+        }
+	
+	
 	/**
 	 * Helper method to log the data currently stored in session.
 	 * 
@@ -468,6 +650,14 @@ public class GetNextBusSpeechlet implements Speechlet {
 	}
 		
 	//TODO: This can become independent of Amazon Speechlet
+	/**
+	 * Helper method that takes location data from the data object and passes it along to the Google Maps API.
+	 * @param in The conversation data object
+	 * @return The nearest stop to the location given by the user in the conversation
+	 * @throws InvalidInputException
+	 * @throws IOException
+	 * @throws JSONException
+	 */
 	private Stop getNearestStop(PaInputData in) throws InvalidInputException, IOException, JSONException {
 		Location c = new Location();
 		c.setAddress(in.getLocationAddress());
@@ -477,6 +667,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 	}
 
 	//TODO: This can become independent of Amazon Speechlet
+	/**
+	 * Helper method that makes a call to the TrueTime API to obtain predictions for all buses (or one particular bus, depending on the skill context)
+	 * arriving at a given stop.
+	 * @return Predictions of buses arriving at the stop (that was found during the conversation)
+	 */
 	private List<Message> getPredictions() {
 		List<Message> messages = new ArrayList<Message>();
 		if (skillContext.isAllRoutes()) {
