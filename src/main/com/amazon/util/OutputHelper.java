@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import co.prosody.portAuthority.GetNextBusSpeechlet;
+import co.prosody.portAuthority.ResponseObject;
 import co.prosody.portAuthority.api.Message;
 import co.prosody.portAuthority.googleMaps.GoogleMaps;
 import co.prosody.portAuthority.storage.PaInputData;
@@ -108,14 +109,31 @@ public class OutputHelper {
 	 */
 	public static final String STOP_SPEECH="Oh? OK";
 	
-
+	public static ResponseObject getWelcomeResponse(){
+		String output=AUDIO_WELCOME+" "+SPEECH_WELCOME + ROUTE_PROMPT;
+		return new ResponseObject("", output);
+	}
+	
+	public static ResponseObject getHelpResponse(){
+		String output=AUDIO_WELCOME+" "+HELP_SPEECH + " " + ROUTE_PROMPT;
+		ResponseObject response = new ResponseObject("", output);
+		return response;
+	}
+	
+	public static ResponseObject getStopResponse(){
+		String output=STOP_SPEECH;
+		ResponseObject response = new ResponseObject("", output);
+		return response;
+	}
+	
+	//No Speech Output
 	/**
-	 * Returns a String response that indicates there are no buses (or no particular bus) arriving at the given stop within the next 30 minutes.
+	 * Returns a ResponseObject response that indicates there are no buses (or no particular bus) arriving at the given stop within the next 30 minutes.
 	 * @param inputData The data object of the conversation
 	 * @param skillContext The context of the conversation
 	 * @return The response indicating no buses are due to arrive
 	 */
-	public static String getNoResponse(PaInputData inputData, SkillContext skillContext) {
+	public static ResponseObject getNoResponse(PaInputData inputData, SkillContext skillContext) {
 		String textOutput="";
 		if (skillContext.getNeedsLocation()){
 			textOutput=String.format(LOCATION_SPEECH, inputData.getLocationName(), inputData.getStopName()); 
@@ -131,8 +149,7 @@ public class OutputHelper {
 			textOutput+=HELP_ALL_ROUTES_SPEECH;
 			
 		}
-
-		return textOutput;
+		return new ResponseObject(textOutput, textOutput);
 
 	}
 
@@ -145,12 +162,14 @@ public class OutputHelper {
 	 * @param skillContext The context of the conversation
 	 * @return SSML speechOutput and a regular text output, returned in array 
 	 */
-	public static String[] generateResponse(PaInputData inputData, ArrayList<Result> results, SkillContext skillContext) {	
-		String[] output = new String[2];
+	public static ResponseObject generateResponse(PaInputData inputData, ArrayList<Result> results, SkillContext skillContext) {
 		String textOutput = "";
 		String speechOutput;
 
 		if (skillContext.getNeedsLocation()){
+			if (!skillContext.isAllRoutes()){
+				textOutput+=skillContext.getFeedbackText();
+			}
 			textOutput+=String.format(LOCATION_SPEECH, inputData.getLocationName(), inputData.getStopName());
 		} else {
 			textOutput+=String.format(BUSSTOP_SPEECH, inputData.getStopName()) ;
@@ -168,7 +187,7 @@ public class OutputHelper {
 
 			routeID=results.get(i).getRoute();
 			when = results.get(i).getEstimate();
-
+			LOGGER.info(routeID + " " + when);
 			if (i==0){
 				textOutput += String.format(FIRST_RESULT_SPEECH,routeID,when);
 				speechOutput += String.format(FIRST_RESULT_SPEECH,routeID,when);
@@ -189,9 +208,9 @@ public class OutputHelper {
 			}
 			prevRouteID=routeID;
 		}
-		output[0] = textOutput;
-		output[1] = speechOutput;
-		return output;
+		ResponseObject response;
+		response = new ResponseObject(textOutput, speechOutput);
+		return response;
 		//TODO: maybe the skill context should get these values, instead of having them returned...
 	}
         
@@ -239,12 +258,11 @@ public class OutputHelper {
      * @return A List of Results
      */
     public static ArrayList<Result> getResults(List<Message> messages){
-    	
+    	ArrayList<Result> results = new ArrayList<Result>();
 		if (messages.size() == 0 || messages.get(0).getMessageType().equals(Message.ERROR)){
-    		return null;
+    		return results; //return an empty ArrayList
     	}
 
-		ArrayList<Result> results = new ArrayList<Result>();
 		for (int i = 0; i < messages.size(); i++) {
 			results.add(new Result(messages.get(i).getRouteID(), messages.get(i).getEstimate()));
 		}
@@ -259,8 +277,9 @@ public class OutputHelper {
      * @param failureLabel The API that couldn't establish connection
      * @return The failure reponse
      */
-	public static String getAPIFailureResponse(String failureLabel) {
-		String message = ("There has been a problem connecting to " + failureLabel + ". I'll let the developers know."); 
-		return message;
+	public static ResponseObject getAPIFailureResponse(String failureLabel) {
+		String message = ("There has been a problem connecting to " + failureLabel + ". I'll let the developers know.");
+		ResponseObject response = new ResponseObject(message, message);
+		return response;
 	}
 }

@@ -70,6 +70,8 @@ public class GetNextBusSpeechlet implements Speechlet {
 	private SkillContext skillContext;
 	private PaInputData data;
 	private InformationFetcher fetcher;
+	
+	private ResponseObject response;
 
 	/** PUBLIC METHODS ******************************/
 	/**
@@ -95,7 +97,7 @@ public class GetNextBusSpeechlet implements Speechlet {
 		} else {
 			analytics.postEvent(AnalyticsManager.CATEGORY_LAUNCH, "Welcome");
 			//by default, the lastQuestion of skill context is Route_prompt
-			return getWelcomeResponse();
+			return createWelcomeResponse();
 		}
 		
 		
@@ -179,11 +181,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 			analytics.postEvent(AnalyticsManager.CATEGORY_INTENT, intent.getName());
 			switch (intent.getName()) {
 			case "AMAZON.StopIntent":
-				return getStopResponse();
+				return createStopResponse();
 			case "AMAZON.CancelIntent":
-				return getStopResponse();
+				return createStopResponse();
 			case "AMAZON.HelpIntent":
-				return getHelpResponse();
+				return createHelpResponse();
 
 			case DataHelper.RESET_INTENT_NAME:
 				// Delete current record for this user
@@ -436,26 +438,27 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 * Creates a welcome response and then prompts the user for a route.
 	 * @return SpeechletResponse a welcome response
 	 */
-	private static SpeechletResponse getWelcomeResponse(){
-		String output=OutputHelper.AUDIO_WELCOME+" "+OutputHelper.SPEECH_WELCOME + OutputHelper.ROUTE_PROMPT;
-		return newAskResponse(output, OutputHelper.ROUTE_PROMPT);
+	private SpeechletResponse createWelcomeResponse(){
+		response = OutputHelper.getWelcomeResponse();
+		return newAskResponse(response.getSpeechOutput(), OutputHelper.ROUTE_PROMPT);
 	}
 	
 	/**
 	 * Creates a response that is designed to help the user understand how to use the app, and then prompts the user for a route.
 	 * @return SpeechletResponse a help response
 	 */
-	private static SpeechletResponse getHelpResponse(){
-		String output=OutputHelper.AUDIO_WELCOME+" "+OutputHelper.HELP_SPEECH + " " + OutputHelper.ROUTE_PROMPT;
-		return newAskResponse(output, OutputHelper.ROUTE_PROMPT);
+	private SpeechletResponse createHelpResponse(){
+		response = OutputHelper.getHelpResponse();
+		return newAskResponse(response.getSpeechOutput(), OutputHelper.ROUTE_PROMPT);
 	}
 	
 	/**
 	 * Creates a response for when the user ends the session abruptly (i.e "Alexa, stop")
 	 * @return SpeechletResponse a stop response
 	 */
-	private static SpeechletResponse getStopResponse(){
-		return newTellResponse(OutputHelper.STOP_SPEECH);
+	private SpeechletResponse createStopResponse(){
+		response = OutputHelper.getStopResponse();
+		return newTellResponse(response.getSpeechOutput());
 	}
 	
 	/**
@@ -463,11 +466,11 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 * the user defined stop within the next 30 minutes.
 	 * @return SpeechletResponse a failure response
 	 */
-	private SpeechletResponse getNoResponse() {
+	private SpeechletResponse createNoResponse() {
 		SsmlOutputSpeech outputSpeech=new SsmlOutputSpeech();
-		String output = OutputHelper.getNoResponse(data, skillContext);
-		outputSpeech.setSsml("<speak> " + OutputHelper.AUDIO_FAILURE + output + "</speak>");
-		return SpeechletResponse.newTellResponse(outputSpeech, buildCard(output));
+		response = OutputHelper.getNoResponse(data, skillContext);
+		outputSpeech.setSsml("<speak> " + OutputHelper.AUDIO_FAILURE + response.getSpeechOutput() + "</speak>");
+		return SpeechletResponse.newTellResponse(outputSpeech, buildCard(response.getTextOutput()));
 	}
 	
 	//TODO: A lot of this logic could be separated from the Speechlet.
@@ -480,15 +483,16 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 */
 	
 	private SpeechletResponse buildResponse(List<Message> messages) {
-		ArrayList<Result> results = null;
-		try {
+		//create an empty ArrayList of Results and try to get results for the bus route
+		ArrayList<Result> results = new ArrayList<Result>();
+		try { //why would an exception be thrown?
 			results= OutputHelper.getResults(messages);
 		} catch (Exception e){
 			analytics.postException(e.getMessage(), true);
 			e.printStackTrace();
 		}
 		
-		if (results != null){
+		if (!results.isEmpty()){ //if there were results returned
 			if (skillContext.isAllRoutes()) {
 				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "Success",
 						"All routes at " + data.getStopName(), messages.size());
@@ -498,49 +502,9 @@ public class GetNextBusSpeechlet implements Speechlet {
 			}
 			return readResults(results);
 		} else {
-			return getNoResponse();
+			return createNoResponse();
 		}
 	}
-	
-	/*
-	private SpeechletResponse buildResponse(List<Message> messages) {
-		SpeechletResponse output;
-		try {
-			if (messages.size() == 0) {
-				log.info("No Messages");
-				output = getNoResponse();
-				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "No Result", "Null", messages.size());
-				return output;
-			}
-
-			if ((messages.size() == 1) && (messages.get(0).getMessageType().equals(Message.ERROR))) {
-				log.error("1 error message:" + messages.get(0) + ":" + messages.get(0).getError());
-				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "No Result", messages.get(0).getError(),
-						messages.size());
-				return getNoResponse();
-			}
-
-			ArrayList<Result> results = new ArrayList<Result>();
-			for (int i = 0; i < messages.size(); i++) {
-				results.add(new Result(messages.get(i).getRouteID(), messages.get(i).getEstimate()));
-			}
-			
-			if (skillContext.isAllRoutes()) {
-				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "Success",
-						"All routes at " + data.getStopName(), messages.size());
-			} else {
-				analytics.postEvent(AnalyticsManager.CATEGORY_RESPONSE, "Success",
-						data.getRouteName() + " at " + data.getStopName(), messages.size());
-			}
-			
-			return readResults(results);
-
-		} catch (Exception e) {
-			analytics.postException(e.getMessage(), true);
-			e.printStackTrace();
-		}
-		return null;
-	}*/
 	
 	/**
 	 * Given a list of results (routeIDs and ETAs), create a response listing off information for
@@ -551,17 +515,15 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 */
 	public SpeechletResponse readResults(ArrayList<Result> results) {	
 		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
-		String [] output = OutputHelper.generateResponse(data, results, skillContext);
-		String textOutput = output[0];
-		String speechOutput = output[1];
-		outputSpeech.setSsml("<speak> " + OutputHelper.AUDIO_SUCCESS + speechOutput + "</speak>");
+		response = OutputHelper.generateResponse(data, results, skillContext);
+		outputSpeech.setSsml("<speak> " + OutputHelper.AUDIO_SUCCESS + response.getSpeechOutput() + "</speak>");
 		Card card;
 		
 		try {
-			card = buildCard(textOutput, data.getLocationLat(), data.getLocationLong(), data.getStopLat(), data.getStopLon());
+			card = buildCard(response.getTextOutput(), data.getLocationLat(), data.getLocationLong(), data.getStopLat(), data.getStopLon());
 		} catch (Exception e) {
 			log.error(e.getMessage());
-			card= buildCard(textOutput);
+			card= buildCard(response.getTextOutput());
 		}
 		return SpeechletResponse.newTellResponse(outputSpeech, card);
 	}
@@ -571,10 +533,10 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 * @param failureLabel The failure message
 	 * @return SpeechletResponse the failure response
 	 */
-	public static SpeechletResponse getFailureResponse(String failureLabel) {
-		String message = OutputHelper.getAPIFailureResponse(failureLabel);
+	public SpeechletResponse getFailureResponse(String failureLabel) {
+	    response = OutputHelper.getAPIFailureResponse(failureLabel);
 		SsmlOutputSpeech outputSpeech = new SsmlOutputSpeech();
-		outputSpeech.setSsml("<speak> " + message + " </speak>");
+		outputSpeech.setSsml("<speak> " + response.getSpeechOutput() + " </speak>");
 		return SpeechletResponse.newTellResponse(outputSpeech);
 	}
 	
