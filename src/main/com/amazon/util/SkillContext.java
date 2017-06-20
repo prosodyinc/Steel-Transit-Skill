@@ -2,8 +2,6 @@ package com.amazon.util;
 
 import java.util.LinkedHashMap;
 
-import co.prosody.portAuthority.storage.PaInputData;
-
 /**
  * Contains session scoped settings.
  */

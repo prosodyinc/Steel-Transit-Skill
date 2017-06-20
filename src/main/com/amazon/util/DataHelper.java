@@ -1,15 +1,11 @@
 package com.amazon.util;
 
-import com.amazon.speech.speechlet.Session;
-
 import co.prosody.portAuthority.APIException;
 import co.prosody.portAuthority.InvalidInputException;
 import co.prosody.portAuthority.UnexpectedInputException;
 import co.prosody.portAuthority.api.Message;
 import co.prosody.portAuthority.api.TrueTime;
-import co.prosody.portAuthority.api.TrueTimeAPI;
 import co.prosody.portAuthority.googleMaps.GoogleMaps;
-import co.prosody.portAuthority.googleMaps.NearestStopLocator;
 import co.prosody.portAuthority.storage.PaInputData;
 import co.prosody.portAuthority.util.DirectionCorrector;
 import co.prosody.portAuthority.util.Location;
@@ -18,17 +14,13 @@ import co.prosody.portAuthority.util.Route;
 import co.prosody.portAuthority.util.RouteCorrector;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.amazon.speech.slu.Intent;
-import com.amazon.speech.slu.Slot;
 
 /**
  * @author brown
@@ -77,7 +69,7 @@ public class DataHelper {
 			data.setLocationAddress(c.getAddress());
 			
 			if (!c.isAddress()) {
-				skillContext.addFeedbackText("I found " + location + " at " + c.getStreetAddress() + ". ");
+				skillContext.setFeedbackText("I found " + c.getName() + " at " + c.getStreetAddress() + ". ");
 			}
 
 		} catch (JSONException jsonE) {
@@ -118,7 +110,7 @@ public class DataHelper {
 					"Could not find the bus line " + routeID + "." + OutputHelper.ROUTE_PROMPT);
 		}
 
-		skillContext.addFeedbackText(route.getId() + "," + route.getName() + ", ");
+		skillContext.setFeedbackText(route.getId() + "," + route.getName() + ", ");
 
 	}
 	
