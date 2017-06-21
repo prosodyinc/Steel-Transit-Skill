@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,8 +17,10 @@ import org.json.JSONException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.amazon.speech.json.SpeechletRequestEnvelope;
 import com.amazon.speech.slu.Intent;
 import com.amazon.speech.slu.Slot;
+import com.amazon.speech.speechlet.Context;
 import com.amazon.speech.speechlet.IntentRequest;
 import com.amazon.speech.speechlet.LaunchRequest;
 import com.amazon.speech.speechlet.Session;
@@ -26,6 +29,11 @@ import com.amazon.speech.speechlet.SessionStartedRequest;
 import com.amazon.speech.speechlet.Speechlet;
 import com.amazon.speech.speechlet.SpeechletException;
 import com.amazon.speech.speechlet.SpeechletResponse;
+import com.amazon.speech.speechlet.SpeechletV2;
+import com.amazon.speech.speechlet.User;
+import com.amazon.speech.speechlet.interfaces.system.SystemInterface;
+import com.amazon.speech.speechlet.interfaces.system.SystemState;
+import com.amazon.speech.ui.AskForPermissionsConsentCard;
 import com.amazon.speech.ui.Card;
 import com.amazon.speech.ui.Image;
 import com.amazon.speech.ui.OutputSpeech;
@@ -42,6 +50,12 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import address.Address;
+import address.AlexaDeviceAddressClient;
+import address.DeviceAddressClientException;
+import address.UnauthorizedException;
+
 import com.amazon.speech.ui.Reprompt;
 import com.amazon.speech.ui.SimpleCard;
 import co.prosody.portAuthority.api.Message;
@@ -53,11 +67,35 @@ import co.prosody.portAuthority.storage.PaInputData;
 import co.prosody.portAuthority.util.*;
 import co.prosody.portAuthority.googleMaps.*;
 
-public class GetNextBusSpeechlet implements Speechlet {
+public class GetNextBusSpeechlet implements SpeechletV2 {
 
 	private static Logger log = LoggerFactory.getLogger(GetNextBusSpeechlet.class);
 	
 	public static ObjectMapper mapper = new ObjectMapper();
+	
+	/**
+     * This is the default title that this skill will be using for cards.
+     */
+    private static final String ADDRESS_CARD_TITLE = "Sample Device Address Skill";
+
+    /**
+     * The permissions that this skill relies on for retrieving addresses. If the consent token isn't
+     * available or invalid, we will request the user to grant us the following permission
+     * via a permission card.
+     *
+     * Another Possible value if you only want permissions for the country and postal code is:
+     * read::alexa:device:all:address:country_and_postal_code
+     * Be sure to check your permissions settings for your skill on https://developer.amazon.com/
+     */
+    private static final String ALL_ADDRESS_PERMISSION = "read::alexa:device:all:address";
+
+    private static final String WELCOME_TEXT = "Welcome to the Sample Device Address API Skill! What do you want to ask?";
+    private static final String HELP_TEXT = "You can use this skill by asking something like: whats my address";
+    private static final String UNHANDLED_TEXT = "This is unsupported. Please ask something else.";
+    private static final String ERROR_TEXT = "There was an error with the skill. Please try again.";
+	
+	
+	
 
 	public static final String INVOCATION_NAME = "Steel Transit";
 
@@ -77,7 +115,13 @@ public class GetNextBusSpeechlet implements Speechlet {
 	/**
 	 * called when the skill is first requested and no intent is provided return
 	 */
-	public SpeechletResponse onLaunch(LaunchRequest request, Session session) throws SpeechletException {
+
+	public GetNextBusSpeechlet(){}
+	
+	@Override
+	public SpeechletResponse onLaunch(SpeechletRequestEnvelope<LaunchRequest> requestEnvelope) {
+		LaunchRequest request = requestEnvelope.getRequest();
+		Session session = requestEnvelope.getSession();
 		BasicConfigurator.configure();
 		log.info("onLaunch requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		
@@ -99,14 +143,24 @@ public class GetNextBusSpeechlet implements Speechlet {
 			//by default, the lastQuestion of skill context is Route_prompt
 			return createWelcomeResponse();
 		}
-		
-		
 	}
 
+	
+	@Override
+	public void onSessionEnded(SpeechletRequestEnvelope<SessionEndedRequest> requestEnvelope) {
+		SessionEndedRequest request = requestEnvelope.getRequest();
+		Session session = requestEnvelope.getSession();
+		log.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
+		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_END);
+	}
+	
 	/**
 	 * Called when an intent is first received, before handing to onIntent.
 	 */
-	public void onSessionStarted(SessionStartedRequest request, Session session) throws SpeechletException {
+	@Override
+	public void onSessionStarted(SpeechletRequestEnvelope<SessionStartedRequest> requestEnvelope) {
+		Session session = requestEnvelope.getSession();
+		SessionStartedRequest request = requestEnvelope.getRequest();
 		log.info("onSessionStarted requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
 		
 		analytics = new AnalyticsManager();
@@ -120,26 +174,23 @@ public class GetNextBusSpeechlet implements Speechlet {
 		session.setAttribute(DataHelper.SKILL_CONTEXT_NAME, skillContext);
 		
 		log.info("Called from onSessionStarted {}", session.getAttribute(DataHelper.SESSION_OBJECT_NAME).getClass().toString());
-		
 	}
-	
 	/**
 	 * Called when the user invokes an intent.
 	 */
-	public SpeechletResponse onIntent(IntentRequest request, Session session) throws SpeechletException {
+	@Override
+	public SpeechletResponse onIntent(SpeechletRequestEnvelope<IntentRequest> requestEnvelope) {
+		Session session = requestEnvelope.getSession();
+		IntentRequest request = requestEnvelope.getRequest();
 		log.info("onIntent intent={}, requestId={}, sessionId={}", request.getIntent().getName(),
 				request.getRequestId(), session.getSessionId());
 		log.info("onIntent sessionValue={}", session.getAttributes().toString());
-		
-		/* It appears that onSessionStarted is not being called, at least when I test online. Don't know why that would be.. 
-		 * Maybe when you test online, onSessionStarted isn't called */
 		
 		if (analytics == null){
 			analytics = new AnalyticsManager();
 			analytics.setUserId(session.getUser().getUserId());
 			analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_START);
 		} 
-		
 		switch (request.getIntent().getName()){
 		case(DataHelper.ONE_SHOT_INTENT_NAME):
 			fetcher = new OneShotFetcher();
@@ -230,10 +281,46 @@ public class GetNextBusSpeechlet implements Speechlet {
 				extractLocation(session, intent);
 				break;
 				
+			case "Address":
+				User user = session.getUser();
+				String consentToken = user.getPermissions() != null ? user.getPermissions().getConsentToken() : null;
+				//String consentToken = session.getUser().getPermissions().getConsentToken();
+				
+                if (consentToken == null) {
+                    log.info("The user hasn't authorized the skill. Sending a permissions card.");
+                    return getPermissionsResponse();
+                }
+
+                try {
+                    SystemState systemState = getSystemState(requestEnvelope.getContext());
+
+                    String deviceId = systemState.getDevice().getDeviceId();
+                    String apiEndpoint = systemState.getApiEndpoint();
+
+                    AlexaDeviceAddressClient alexaDeviceAddressClient = new AlexaDeviceAddressClient(
+                        deviceId, consentToken, apiEndpoint);
+
+                    Address addressObject = alexaDeviceAddressClient.getFullAddress();
+
+                    if (addressObject == null) {
+                        return getAskResponse(ADDRESS_CARD_TITLE, ERROR_TEXT);
+                    }
+
+                    return getAddressResponse(
+                        addressObject.getAddressLine1(),
+                        addressObject.getStateOrRegion(),
+                        addressObject.getPostalCode());
+                } catch (UnauthorizedException e) {
+                    return getPermissionsResponse();
+                } catch (DeviceAddressClientException e) {
+                    log.error("Device Address Client failed to successfully return the address.", e);
+                    return getAskResponse(ADDRESS_CARD_TITLE, ERROR_TEXT);
+                }
 			//Either a route intent, direction intent, or location intent
 			default:
 				handleSingleIntent(session, intent);
-				break;
+				
+				
 			}
 		} catch (InvalidInputException e) {
 			analytics.postException(e.getMessage(), false);
@@ -277,8 +364,127 @@ public class GetNextBusSpeechlet implements Speechlet {
 		log.info(predictions.toString());
 		// get speech response
 		return buildResponse(predictions);
-
 	}
+	
+	/**
+     * Creates a {@code SpeechletResponse} for the GetAddress intent.
+     * @return SpeechletResponse spoken and visual response for the given intent
+     */
+    private SpeechletResponse getAddressResponse(String streetName, String state, String zipCode) {
+    	/*String speechText = "Your address is : " + address.getAddressLine1() + " " + 
+    			address.getAddressLine2() + " " + address.getAddressLine3() + " " +
+    			address.getCity() + " " + address.getCountryCode() + " " + address.getDistrictOrCounty() + " "
+    			+ address.getCountryCode() + " " + address.getPostalCode() + " " + address.getStateOrRegion() + ".";*/
+        String speechText = "Your address is " + streetName + " " + state + ", " + zipCode;
+
+        SimpleCard card = getSimpleCard(ADDRESS_CARD_TITLE, speechText);
+
+        PlainTextOutputSpeech speech = getPlainTextOutputSpeech(speechText);
+
+        return SpeechletResponse.newTellResponse(speech, card);
+    }
+
+    /**
+     * Creates a {@code SpeechletResponse} for permission requests.
+     * @return SpeechletResponse spoken and visual response for the given intent
+     */
+    private SpeechletResponse getPermissionsResponse() {
+        String speechText = "You have not given this skill permissions to access your address. " +
+            "Please give this skill permissions to access your address.";
+
+        // Create the permission card content.
+        // The differences between a permissions card and a simple card is that the
+        // permissions card includes additional indicators for a user to enable permissions if needed.
+        AskForPermissionsConsentCard card = new AskForPermissionsConsentCard();
+        card.setTitle(ADDRESS_CARD_TITLE);
+
+        Set<String> permissions = new HashSet<>();
+        permissions.add(ALL_ADDRESS_PERMISSION);
+        card.setPermissions(permissions);
+
+        PlainTextOutputSpeech speech = getPlainTextOutputSpeech(speechText);
+
+        return SpeechletResponse.newTellResponse(speech, card);
+    }
+
+    /**
+     * Helper method that retrieves the system state from the request context.
+     * @param context request context.
+     * @return SystemState the systemState
+     */
+    private SystemState getSystemState(Context context) {
+        return context.getState(SystemInterface.class, SystemState.class);
+    }
+
+    /**
+     * Helper method that creates a card object.
+     * @param title title of the card
+     * @param content body of the card
+     * @return SimpleCard the display card to be sent along with the voice response.
+     */
+    private SimpleCard getSimpleCard(String title, String content) {
+        SimpleCard card = new SimpleCard();
+        card.setTitle(title);
+        card.setContent(content);
+
+        return card;
+    }
+
+    /**
+     * Helper method that will get the intent name from a provided Intent object. If a name does not
+     * exist then this method will return null.
+     * @param intent intent object provided from a skill request.
+     * @return intent name or null.
+     */
+    private String getIntentName(Intent intent) {
+        return (intent != null) ? intent.getName() : null;
+    }
+
+    /**
+     * Helper method for retrieving an OutputSpeech object when given a string of TTS.
+     * @param speechText the text that should be spoken out to the user.
+     * @return an instance of SpeechOutput.
+     */
+    private PlainTextOutputSpeech getPlainTextOutputSpeech(String speechText) {
+        PlainTextOutputSpeech speech = new PlainTextOutputSpeech();
+        speech.setText(speechText);
+
+        return speech;
+    }
+
+    /**
+     * Helper method that returns a reprompt object. This is used in Ask responses where you want
+     * the user to be able to respond to your speech.
+     * @param outputSpeech The OutputSpeech object that will be said once and repeated if necessary.
+     * @return Reprompt instance.
+     */
+    private Reprompt getReprompt(OutputSpeech outputSpeech) {
+        Reprompt reprompt = new Reprompt();
+        reprompt.setOutputSpeech(outputSpeech);
+
+        return reprompt;
+    }
+
+    /**
+     * Helper method for retrieving an Ask response with a simple card and reprompt included.
+     * @param cardTitle Title of the card that you want displayed.
+     * @param speechText speech text that will be spoken to the user.
+     * @return the resulting card and speech text.
+     */
+    private SpeechletResponse getAskResponse(String cardTitle, String speechText) {
+        SimpleCard card = getSimpleCard(cardTitle, speechText);
+        PlainTextOutputSpeech speech = getPlainTextOutputSpeech(speechText);
+        Reprompt reprompt = getReprompt(speech);
+
+        return SpeechletResponse.newAskResponse(speech, reprompt, card);
+    }
+
+	
+	
+		/* It appears that onSessionStarted is not being called, at least when I test online. Don't know why that would be.. 
+		 * Maybe when you test online, onSessionStarted isn't called */
+		
+		
 	
 	/**
 	 * If the session must go on, and the user is re-prompted for more input, this method can be called to save the context and data
@@ -393,10 +599,6 @@ public class GetNextBusSpeechlet implements Speechlet {
 		}
 	}
 	
-	public void onSessionEnded(SessionEndedRequest request, Session session) throws SpeechletException {
-		log.info("onSessionEnded requestId={}, sessionId={}", request.getRequestId(), session.getSessionId());
-		analytics.postSessionEvent(AnalyticsManager.ACTION_SESSION_END);
-	}
 
 	
 	
@@ -670,6 +872,10 @@ public class GetNextBusSpeechlet implements Speechlet {
 		getPaDao().savePaInput(input);
 
 	}
+
+	
+
+	
 	
 }
 
