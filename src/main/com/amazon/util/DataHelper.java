@@ -62,6 +62,12 @@ public class DataHelper {
 			
 			Location c = GoogleMaps.findSourceLocation(location);
 			
+			log.info("Location name: {}", c.getName());
+			String locName = c.getName();
+			locName = locName.replaceAll("&", "and");
+			c.setName(locName);
+			log.info("Location name after parsing: {}", c.getName());
+			
 			data.setLocation(c);
 			data.setLocationName(c.getName());
 			data.setLocationLat("" + c.getLat());
@@ -69,7 +75,7 @@ public class DataHelper {
 			data.setLocationAddress(c.getAddress());
 			
 			if (!c.isAddress()) {
-				skillContext.setFeedbackText("I found " + c.getName() + " at " + c.getStreetAddress() + ". ");
+				skillContext.setFeedbackText("I found " + c.getName() + " at " + c.getStreetAddress() + ", ");
 			}
 
 		} catch (JSONException jsonE) {
