@@ -75,7 +75,7 @@ public class DataHelper {
 			data.setLocationAddress(c.getAddress());
 			
 			if (!c.isAddress()) {
-				skillContext.setFeedbackText("I found " + c.getName() + " at " + c.getStreetAddress() + ", ");
+				skillContext.setFeedbackText("I found " + c.getName() + " at " + c.getStreetAddress() + ". ");
 			}
 
 		} catch (JSONException jsonE) {
