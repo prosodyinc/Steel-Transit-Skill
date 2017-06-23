@@ -257,7 +257,18 @@ public class GetNextBusSpeechlet implements Speechlet {
 		try {
 			if (data.getStopID() == null) {
 				skillContext.setNeedsLocation(true);
-				data.setStop(getNearestStop(data));
+				Stop stop = getNearestStop();
+				data.setStop(stop);
+				if (stop.getDistance() > 1609.34){
+					log.info("Stop is over a mile away.");
+					skillContext.setNeedsLocation(true);
+					skillContext.setAdditionalQuestions(true);
+					saveAttributes(session);
+					return newAskResponse(stop.getStopName() + " is over a mile away from the "
+							+ data.getLocationName() + " I found. Please say the location again and be more specific.",
+							"Please say the location again and be more specific.");
+				}
+				log.info("Distance from location to the stop: {}", stop.getDistance());
 			} else {
 				skillContext.setNeedsLocation(false);
 			}
@@ -620,12 +631,12 @@ public class GetNextBusSpeechlet implements Speechlet {
 	 * @throws IOException
 	 * @throws JSONException
 	 */
-	private Stop getNearestStop(PaInputData in) throws InvalidInputException, IOException, JSONException {
+	private Stop getNearestStop() throws InvalidInputException, IOException, JSONException {
 		Location c = new Location();
-		c.setAddress(in.getLocationAddress());
-		c.setLat(new Double(in.getLocationLat()).doubleValue());
-		c.setLng(new Double(in.getLocationLong()).doubleValue());
-		return GoogleMaps.findNearestStop(c, in.getRouteID(), in.getDirection());
+		c.setAddress(data.getLocationAddress());
+		c.setLat(new Double(data.getLocationLat()).doubleValue());
+		c.setLng(new Double(data.getLocationLong()).doubleValue());
+		return GoogleMaps.findNearestStop(c, data.getRouteID(), data.getDirection());
 	}
 
 	//TODO: This can become independent of Amazon Speechlet
