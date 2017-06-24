@@ -49,7 +49,7 @@ public class Location {
     }
     
     public boolean isAddress(){
-    	if (types!=null&&types.contains("street_address")){
+    	if (types!=null&&types.contains("street_address") || types.contains("premise") || types.contains("intersection")){
     		return true;
     	} else{
     		return false;
