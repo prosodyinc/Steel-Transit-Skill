@@ -261,9 +261,8 @@ public class GetNextBusSpeechlet implements Speechlet {
 				data.setStop(stop);
 				if (stop.getDistance() > 1609.34){
 					log.info("Stop is over a mile away.");
-					skillContext.setNeedsLocation(true);
-					skillContext.setAdditionalQuestions(true);
-					saveAttributes(session);
+					data.setStopID(null);
+					skillContext.setLastQuestion(OutputHelper.LOCATION_PROMPT);
 					return newAskResponse(stop.getStopName() + " is over a mile away from the "
 							+ data.getLocationName() + " I found. Please say the location again and be more specific.",
 							"Please say the location again and be more specific.");
